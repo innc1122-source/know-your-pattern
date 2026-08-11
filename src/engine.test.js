@@ -166,6 +166,24 @@ console.log('\n12. honest intermediate content before a comparison unlocks');
   t('time satisfied, count still short', up2.needDays === 0 && up2.needCount === 3, JSON.stringify(up2));
 }
 
+console.log('\n12b. order-independence — records may arrive out of sequence');
+{
+  // same three moments as section 12 but shuffled: array order must not skew the span
+  const scrambled = [M(1,'autonomy','paused'), M(5,'autonomy','react_now'), M(3,'autonomy','react_now')];
+  const up = KYP.unlockProgress(scrambled);
+  t('needDays never exceeds the threshold', up.needDays <= KYP.TH.changeSpanDays, JSON.stringify(up));
+  t('scrambled unlock matches the sorted result', up.needCount === 3 && up.needDays === 17, JSON.stringify(up));
+
+  // and the change reading must survive a scrambled array (it went null before the fix)
+  const scrambledSlow = [M(20,'autonomy','paused'), M(80,'autonomy','react_now'), M(5,'autonomy','paused'),
+                         M(64,'autonomy','react_now'), M(30,'autonomy','paused'), M(72,'autonomy','react_now')];
+  const c = KYP.change(scrambledSlow,'autonomy');
+  t('change still reads despite scrambled input', c !== null);
+  t('change span stays non-negative', c && c.spanDays >= 0, c && String(c.spanDays));
+  t('then = earliest half, now = latest half', c && c.then.react_now === 100 && c.now.paused === 100,
+     c && JSON.stringify([c && c.then, c && c.now]));
+}
+
 console.log('\n13. off-list report — the word list judging itself');
 {
   const mk = (d,sig,other) => ({...M(d,sig,'react_now'), reaction:'irritated', other:other||{}});

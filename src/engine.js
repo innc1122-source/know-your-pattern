@@ -24,7 +24,10 @@ const KYP = (() => {
   };
 
   /* ---------- helpers ---------- */
-  const bySignal = (ms, s) => ms.filter(m => m.signal === s);
+  // oldest-first: change() and unlockProgress() read rows[0] as the earliest moment
+  // and split then/now by position, so out-of-order input (imported or back-dated)
+  // must not skew the span. filter() returns a fresh array, so this never mutates ms.
+  const bySignal = (ms, s) => ms.filter(m => m.signal === s).sort((a, b) => a.ts - b.ts);
   const distinct = arr => [...new Set(arr)];
 
   function counts(ms){
