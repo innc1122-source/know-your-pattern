@@ -35,8 +35,8 @@ jobs:
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Publish the repository root; index.html is the entry point
-          path: '.'
+          # Publish the built single-file app in deploy/ as the site root
+          path: './deploy'
 
       - name: Deploy to GitHub Pages
         id: deployment
