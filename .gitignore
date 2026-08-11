@@ -10,3 +10,7 @@ Thumbs.db
 .vscode/
 *.swp
 *~
+
+# Node (src/ dev dependencies for tests)
+node_modules/
+*.log
