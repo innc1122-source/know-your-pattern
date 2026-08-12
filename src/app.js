@@ -251,7 +251,13 @@ const C = {
   lang:'Language',demoLoad:'Load 90 days of sample data',demoWarn:'This replaces what you have. Export first if you want to keep it.',
   aboutT:'What this is',
   aboutB:'A place to notice what repeats. It does not diagnose you and it is not therapy. Everything stays on this device.',
-  del:'Delete this moment'
+  del:'Delete this moment',
+  noteCta:'Or just keep something',
+  noteH:'Something to keep?',
+  noteB:'Good, small, hard to name — anything. Just a line.',
+  notePh:'Just a line…',
+  noteBright:"This one's good",
+  noteTag:'kept'
  },
  zh:{
   notSoMuch:'你可能不是最在意',soMuchAs:'而是更在意',
@@ -361,7 +367,13 @@ const C = {
   lang:'语言',demoLoad:'载入 90 天示范数据',demoWarn:'这会覆盖你现在的记录。想保留请先导出。',
   aboutT:'这是什么',
   aboutB:'一个用来看见重复的地方。它不诊断你，也不是心理治疗。所有数据都留在这台设备上。',
-  del:'删除这条记录'
+  del:'删除这条记录',
+  noteCta:'或者，留住点什么',
+  noteH:'想留住点什么？',
+  noteB:'好的、小的、说不清的，都行。就一句话。',
+  notePh:'就一句话……',
+  noteBright:'这是好的',
+  noteTag:'留了一下'
  }
 };
 
@@ -373,7 +385,7 @@ const Store = (() => {
   let mem = null, ok = true;
   try { localStorage.setItem('kyp.t','1'); localStorage.removeItem('kyp.t'); }
   catch(e){ ok = false; }
-  const blank = () => ({moments:[], predictions:[], lang:'zh', onboarded:false, created:Date.now()});
+  const blank = () => ({moments:[], predictions:[], notes:[], lang:'zh', onboarded:false, created:Date.now()});
   return {
     persistent: ok,
     load(){

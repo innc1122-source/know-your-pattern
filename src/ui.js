@@ -47,6 +47,7 @@ function viewHome(){
     <div class="eyebrow">${ms.length ? c().momentsCount(ms.length) : ''}</div>
     <h1 class="lede">${c().somethingHappened}</h1>
     <button class="cta" onclick="startFlow()">${c().catchOne}</button>
+    <button class="cta ghost notecta" onclick="startNote()">${c().noteCta}</button>
     ${predHook()}
 
     <div class="rule"></div>
@@ -60,11 +61,7 @@ function viewHome(){
 
     <div class="rule"></div>
     <div class="eyebrow mb">${c().recent}</div>
-    ${ms.length ? ms.slice().reverse().slice(0,6).map(m=>`
-      <div class="evline">
-        <div class="d">${fmtDate(m.ts)} · ${sig(m.signal)?sig(m.signal).n:''}</div>
-        <div class="t">${esc(m.text)}</div>
-      </div>`).join('') : `<p class="note">${c().nothingYet}</p>`}
+    ${recentItems()}
   </div>`;
 }
 
@@ -384,6 +381,72 @@ function startFlow(){
   renderFlow();
 }
 function closeFlow(){ flow=null; $('overlay').classList.remove('on'); render(); }
+
+/* recent list on home: moments and light notes, newest first */
+function recentItems(){
+  const ms = D.moments, notes = D.notes || [];
+  if(!ms.length && !notes.length) return `<p class="note">${c().nothingYet}</p>`;
+  const items = [
+    ...ms.map(m => ({ts:m.ts, text:m.text, tag: sig(m.signal)?sig(m.signal).n:''})),
+    ...notes.map(nn => ({ts:nn.ts, text:nn.text, tag: c().noteTag, light:true}))
+  ].sort((a,b)=>b.ts-a.ts).slice(0,6);
+  return items.map(it => `
+    <div class="evline${it.light?' light':''}">
+      <div class="d">${fmtDate(it.ts)} · ${it.tag}</div>
+      <div class="t">${esc(it.text)}</div>
+    </div>`).join('');
+}
+
+/* ---------- light lane: keep a moment without the machinery ----------
+   No signal, no reaction, no engine — a separate D.notes the pattern code
+   never sees. Good ones can be marked; everything is caught the same way. */
+let note = null;
+function startNote(){
+  note = {id:uid(), ts:Date.now(), text:'', bright:false, saved:false, idx:0};
+  $('overlay').classList.add('on');
+  renderNote();
+}
+function closeNote(){ note=null; $('overlay').classList.remove('on'); render(); }
+function setNoteText(v){ if(note){ note.text=v; const b=$('nSave'); if(b) b.disabled = v.trim().length<1; } }
+function toggleBright(){ if(note){ note.bright=!note.bright; renderNote(); } }
+function saveLightNote(){
+  if(!note) return;
+  const v = (note.text||'').trim(); if(v.length<1) return;
+  D.notes = D.notes || [];
+  D.notes.push({id:note.id, ts:Date.now(), text:v, bright:!!note.bright});
+  note.text = v; note.saved = true;
+  D.seen = D.seen || {glimpse:{}, pattern:{}};   // reuse the letgo rotation, no immediate repeat
+  const pool = c().letgoLines, n = pool.length;
+  let i = Math.floor(Math.random()*n);
+  if(n > 1 && i === D.seen.letgoLast) i = (i+1) % n;
+  D.seen.letgoLast = i; note.idx = i;
+  persist();
+  renderNote();
+}
+function renderNote(){
+  const box = $('flowbox'); if(!note) return;
+  if(note.saved){
+    const line = c().letgoLines[note.idx % c().letgoLines.length];
+    box.innerHTML = `<div class="letgo">
+      <div class="lgcard"><div class="lgtext">${esc(note.text)}</div>
+        ${note.bright ? `<div class="lgsig">「${c().noteBright}」</div>` : ''}</div>
+      <div class="lgbreath"><i></i></div>
+      <p class="lgline">${line}</p>
+      <div class="grow"></div>
+      <button class="cta ghost" onclick="closeNote()">${c().letgoDone}</button>
+    </div>`;
+    box.scrollTop = 0; return;
+  }
+  box.innerHTML = `
+    <h1 class="lede sm">${c().noteH}</h1>
+    <p class="body">${c().noteB}</p>
+    <textarea id="nText" rows="4" placeholder="${c().notePh}" oninput="setNoteText(this.value)">${esc(note.text)}</textarea>
+    <button class="pill ${note.bright?'sel':''}" style="align-self:flex-start;margin:12px 0 0" onclick="toggleBright()">${c().noteBright}</button>
+    <div class="grow"></div>
+    <button class="cta" id="nSave" ${note.text.trim().length<1?'disabled':''} onclick="saveLightNote()">${c().save}</button>
+    <button class="cta ghost" onclick="closeNote()">${c().cancel}</button>`;
+  box.scrollTop = 0;
+}
 
 
 /* Order the options by what they wrote. Wording never changes — only sequence.
