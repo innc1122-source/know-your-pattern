@@ -236,7 +236,8 @@ function viewChanges(){
             <div><div class="mono">${c().now}</div><div class="bignum">${h.now}%</div></div>
             <div class="respname">${RESPONSES[h.response]?RESPONSES[h.response][L]:''}</div>
           </div>
-          <p class="body ink" style="margin-top:12px">${c().triggerSame}<br><strong>${c().responseChanged}</strong></p>`;
+          <p class="body ink" style="margin-top:12px">${c().triggerSame}<br><strong>${c().responseChanged}</strong></p>
+          <button class="savecard" onclick="saveChangeCard('${ch.signal}')">${c().saveCard}</button>`;
       } else {
         out += `<div class="body">${Object.entries(ch.now).map(([k,v])=>
           `${RESPONSES[k]?RESPONSES[k][L]:k} ${v}%`).join(' · ')}</div>`;
@@ -258,6 +259,68 @@ function viewChanges(){
 function intDots(v){
   return `<div class="intdots">${[1,2,3].map(i=>
     `<i class="${v>=i-0.25?'on':''}"></i>`).join('')}</div>`;
+}
+
+/* ---------- Then → Now, developed into a keepsake photo ----------
+   A memento, not a boast: it carries the shape of the change, never the words
+   behind it — which is exactly why it is safe to share. */
+function saveChangeCard(signal){
+  const ch = KYP.change(D.moments, signal);
+  if(!ch || !ch.headline) return;
+  const s = sig(signal), h = ch.headline;
+  const cv = document.createElement('canvas'); cv.width = 1080; cv.height = 1350;
+  const x = cv.getContext('2d'); if(!x) return;
+  const W = cv.width, H = cv.height, cx = W/2;
+  const css = getComputedStyle(document.documentElement);
+  const k = (n,f) => (css.getPropertyValue(n).trim() || f);
+  const bg=k('--bg','#0B0913'), ink=k('--ink','#F3F0FF'), ink2=k('--ink2','#ABA0CC'),
+        ink3=k('--ink3','#8A80AC'), accent=k('--accent','#9B6BFF'),
+        soft=k('--accent-soft','rgba(155,107,255,.16)'), line=k('--line2','rgba(243,240,255,.16)');
+  const SERIF='"Newsreader","Noto Serif SC",Georgia,serif';
+  const SANS='"Plus Jakarta Sans","Noto Sans SC",system-ui,sans-serif';
+  const T = (str,px,py,w,sz,fam,col,al) => { x.font=w+' '+sz+'px '+fam; x.fillStyle=col;
+    x.textAlign=al||'left'; x.textBaseline='alphabetic'; x.fillText(str,px,py); };
+
+  x.fillStyle=bg; x.fillRect(0,0,W,H);
+  const g=x.createRadialGradient(cx,H*0.16,0,cx,H*0.16,W*0.95);
+  g.addColorStop(0,soft); g.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=g; x.fillRect(0,0,W,H);
+  x.strokeStyle=line; x.lineWidth=2; rr(x,44,44,W-88,H-88,40); x.stroke();
+
+  try{ x.letterSpacing='8px'; }catch(e){}
+  T('PATTERNA',96,152,'700',30,SANS,accent,'left');
+  try{ x.letterSpacing='0px'; }catch(e){}
+  T(s.n,96,268,'500',78,SERIF,ink,'left');
+
+  T(c().then,cx-230,500,'600',30,SANS,ink3,'center');
+  T(c().now, cx+230,500,'600',30,SANS,ink3,'center');
+  T(h.then+'%',cx-230,632,'500',104,SERIF,ink2,'center');
+  T(h.now+'%', cx+230,632,'500',104,SERIF,accent,'center');
+  T('→',cx,604,'400',60,SERIF,ink3,'center');
+  const resp = RESPONSES[h.response] ? RESPONSES[h.response][L] : '';
+  if(resp) T(resp,cx,724,'600',34,SANS,ink2,'center');
+
+  T(c().triggerSame,cx,918,'500',46,SERIF,ink2,'center');
+  T(c().responseChanged,cx,992,'600',54,SERIF,accent,'center');
+
+  let foot = c().overDays(ch.n,ch.spanDays);
+  if(ch.intensity && ch.intensity.softer) foot += ' · ' + c().softerNow;
+  T(foot,cx,H-116,'600',28,SANS,ink3,'center');
+
+  cv.toBlob(b => { if(b) shareCard(b,'patterna-'+signal+'.png'); }, 'image/png');
+}
+function rr(x,px,py,w,h,r){ x.beginPath(); x.moveTo(px+r,py);
+  x.arcTo(px+w,py,px+w,py+h,r); x.arcTo(px+w,py+h,px,py+h,r);
+  x.arcTo(px,py+h,px,py,r); x.arcTo(px,py,px+w,py,r); x.closePath(); }
+function shareCard(blob,name){
+  try{
+    const file = new File([blob],name,{type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({files:[file]}).catch(()=>{}); return;
+    }
+  }catch(e){}
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
 function viewGaps(){

@@ -163,6 +163,19 @@ console.log('\n6b. predictions become a home hook + a guesses view');
   w.go('home');
 }
 
+console.log('\n6c. a change can be developed into a keepsake card');
+{
+  wipe();
+  [80,72,64].forEach((dd,i)=>seed(dd,'autonomy','react_now','早 '+i));
+  [30,20, 5].forEach((dd,i)=>seed(dd,'autonomy','paused','近 '+i));
+  w.go('changes');
+  t('a real then→now shows', txt().includes('变化的是你'), txt().slice(0,160));
+  t('a keepsake card is offered', txt().includes('洗成一张照片'), txt().slice(0,200));
+  let er=null; try{ w.saveChangeCard('autonomy'); }catch(e){ er=e; }
+  t('developing the card never throws', !er, er && er.message);
+  w.go('home');
+}
+
 console.log('\n7. a real pattern arrives, with calibration');
 wipe();
 [30, 23, 16, 9].forEach((d, i) => seed(d, 'autonomy', i < 2 ? 'react_now' : 'held_in', '记录' + i));
