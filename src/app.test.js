@@ -101,8 +101,8 @@ t('their words are quoted as theirs', ftxt().includes('「我没有选择」'), 
 t('forward promise given', ftxt().includes('我们记下了'));
 t('moment saved', w.__kyp.D.moments.length === 1);
 await fc('完成');
-t('letting-go coda appears', ftxt().includes('先放在这里'), ftxt().slice(0, 120));
-t('coda holds the recorded words', ftxt().includes('领导没问我就加了任务'), ftxt().slice(0, 120));
+t('letting-go coda shows the recorded words', ftxt().includes('领导没问我就加了任务'), ftxt().slice(0, 120));
+t('coda offers a quiet, minimal close', btns().some(b=>b.textContent.includes('放下')) && !ftxt().includes('先放在这里'));
 await fc('放下');
 t('overlay closed', !doc.getElementById('overlay').classList.contains('on'));
 t('listed on home', txt().includes('领导没问我就加了任务'));

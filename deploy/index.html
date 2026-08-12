@@ -296,10 +296,9 @@ textarea::placeholder{color:var(--ink3)}
 @keyframes breathe{0%,100%{transform:scale(.72);opacity:.4}50%{transform:scale(1.6);opacity:.92}}
 .lgline{font-family:var(--serif);font-size:21px;line-height:1.42;letter-spacing:-.01em;
   color:var(--ink);margin:0 0 8px;animation:develop .7s .15s var(--ease) both}
-.lgsub{font-size:13.5px;line-height:1.6;color:var(--ink3);margin:0;animation:develop .7s .3s var(--ease) both}
 .letgo.compressed .lgcard{animation-duration:.85s}
 @media(prefers-reduced-motion:reduce){
-  .lgcard,.lgline,.lgsub{animation:none}
+  .lgcard,.lgline{animation:none}
   .lgcard{opacity:.5;transform:translateY(12px) scaleY(.98);filter:saturate(.5) brightness(.9)}
   .lgbreath i{animation:none;transform:scale(1.05);opacity:.7}
 }
@@ -770,9 +769,7 @@ const C = {
   next:'Next',save:'Save',done:'Done',skip:'Skip',cancel:'Cancel',back:'Back',
   mirrorH:"Here's what you noticed.",mirrorB:"That's enough for now.",
   mirrorPromise:s=>`We'll hold on to "${s}". If it shows up again, we'll tell you.`,
-  letgoLine:"It's down. You can leave this one here for now.",
-  letgoLineShort:"It's down. Leave it here.",
-  letgoSub:'No rush. Let it develop.',
+  letgoLines:['Saved.','Kept.',"It's here now.",'All here.','Okay, kept.','Got it down.'],
   letgoDone:'Set it down',
   seconds:n=>n+' seconds',
   connH:"You've been here before.",
@@ -882,9 +879,7 @@ const C = {
   next:'下一步',save:'保存',done:'完成',skip:'跳过',cancel:'取消',back:'返回',
   mirrorH:'这是你刚刚注意到的。',mirrorB:'今天看到这里就够了。',
   mirrorPromise:s=>`「${s}」我们记下了。如果它再出现，我们会告诉你。`,
-  letgoLine:'记下了。这件事，现在可以先放在这里。',
-  letgoLineShort:'记下了。先放在这里。',
-  letgoSub:'急不得，放着，让它慢慢显。',
+  letgoLines:['记下了。','收下了。','在这里了。','都在了。','好，收下了。','嗯，记下了。'],
   letgoDone:'放下',
   seconds:n=>n+' 秒',
   connH:'这个地方你来过。',
@@ -1571,6 +1566,10 @@ function finishFlow(){
   flow.finishing = true;
   D.seen = D.seen || {glimpse:{}, pattern:{}};
   D.seen.letgo = (D.seen.letgo || 0) + 1;   // the ritual decays after the first few
+  const pool = c().letgoLines, n = pool.length;   // rotate the closing line, never the same twice running
+  let i = Math.floor(Math.random()*n);
+  if(n > 1 && i === D.seen.letgoLast) i = (i+1) % n;
+  D.seen.letgoLast = i; flow.letgoIdx = i;
   persist();
   renderFlow();
 }
@@ -1578,14 +1577,15 @@ function letgoView(){
   const m = flow.m, s = sig(m.signal);
   const full = (D.seen.letgo || 0) <= 3;
   const label = m.signal==='other' ? esc((m.other||{}).signal||'') : (s ? s.s : '');
+  const pool = c().letgoLines;
+  const line = pool[(flow.letgoIdx || 0) % pool.length];
   return `<div class="letgo${full?'':' compressed'}">
     <div class="lgcard">
       <div class="lgtext">${esc(m.text)}</div>
       ${label ? `<div class="lgsig">「${label}」</div>` : ''}
     </div>
     ${full ? `<div class="lgbreath"><i></i></div>` : ''}
-    <p class="lgline">${full ? c().letgoLine : c().letgoLineShort}</p>
-    ${full ? `<p class="lgsub">${c().letgoSub}</p>` : ''}
+    <p class="lgline">${line}</p>
     <div class="grow"></div>
     <button class="cta ghost" onclick="closeFlow()">${c().letgoDone}</button>
   </div>`;

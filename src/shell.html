@@ -296,10 +296,9 @@ textarea::placeholder{color:var(--ink3)}
 @keyframes breathe{0%,100%{transform:scale(.72);opacity:.4}50%{transform:scale(1.6);opacity:.92}}
 .lgline{font-family:var(--serif);font-size:21px;line-height:1.42;letter-spacing:-.01em;
   color:var(--ink);margin:0 0 8px;animation:develop .7s .15s var(--ease) both}
-.lgsub{font-size:13.5px;line-height:1.6;color:var(--ink3);margin:0;animation:develop .7s .3s var(--ease) both}
 .letgo.compressed .lgcard{animation-duration:.85s}
 @media(prefers-reduced-motion:reduce){
-  .lgcard,.lgline,.lgsub{animation:none}
+  .lgcard,.lgline{animation:none}
   .lgcard{opacity:.5;transform:translateY(12px) scaleY(.98);filter:saturate(.5) brightness(.9)}
   .lgbreath i{animation:none;transform:scale(1.05);opacity:.7}
 }
