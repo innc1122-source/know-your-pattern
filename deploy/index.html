@@ -376,7 +376,7 @@ const KYP = (() => {
 
   /* ---------- 1. connection: has this signal been here before? ---------- */
   function connection(ms, current){
-    if(!current.signal) return null;
+    if(!current.signal || current.signal === 'other') return null;   // off-list is vocabulary feedback, not a repeat
     const prior = ms.filter(m => m.id !== current.id && m.signal === current.signal);
     if(prior.length < TH.connectMin - 1) return null;
     const last = prior[prior.length-1];
@@ -478,7 +478,7 @@ const KYP = (() => {
   }
 
   function changesAll(ms){
-    return distinct(ms.map(m=>m.signal).filter(Boolean))
+    return distinct(ms.map(m=>m.signal).filter(s => s && s !== 'other'))   // off-list is not a signal
       .map(s=>change(ms,s)).filter(Boolean).sort((a,b)=>b.n-a.n);
   }
 
@@ -771,6 +771,9 @@ const C = {
   next:'Next',save:'Save',done:'Done',skip:'Skip',cancel:'Cancel',back:'Back',
   mirrorH:"Here's what you noticed.",mirrorB:"That's enough for now.",
   mirrorPromise:s=>`We'll hold on to "${s}". If it shows up again, we'll tell you.`,
+  mirrorPromiseOff:"This one isn't on my list — but I've kept it, and it's helping me see what the list is missing.",
+  offListWord:'hard to name',
+  weekBrightLab:'A bright moment you kept this week',
   letgoLines:['Saved.','Kept.',"It's here now.",'All here.','Okay, kept.','Got it down.'],
   letgoDone:'Set it down',
   seconds:n=>n+' seconds',
@@ -887,6 +890,9 @@ const C = {
   next:'下一步',save:'保存',done:'完成',skip:'跳过',cancel:'取消',back:'返回',
   mirrorH:'这是你刚刚注意到的。',mirrorB:'今天看到这里就够了。',
   mirrorPromise:s=>`「${s}」我们记下了。如果它再出现，我们会告诉你。`,
+  mirrorPromiseOff:'这个不在我的词表里——但我记下了。它在帮我看清词表还缺什么。',
+  offListWord:'说不清的那一下',
+  weekBrightLab:'这周你也留下过一个亮的时刻',
   letgoLines:['记下了。','收下了。','在这里了。','都在了。','好，收下了。','嗯，记下了。'],
   letgoDone:'放下',
   seconds:n=>n+' 秒',
@@ -1002,7 +1008,7 @@ function render(){
   $('storagewarn').textContent = c().storageWarn;
 }
 function go(t){ tab=t; render(); }
-function setLang(l){ L=l; persist(); render(); if(flow) renderFlow(); }
+function setLang(l){ L=l; persist(); render(); if(flow) renderFlow(); if(note) renderNote(); }
 
 /* ---------- home ---------- */
 function viewHome(){
@@ -1037,12 +1043,14 @@ function viewHome(){
 
 function weekCard(wk){
   const s = wk.topSignal ? sig(wk.topSignal) : null;
+  const bright = (D.notes||[]).filter(nn=>nn.bright && nn.ts > Date.now()-7*86400000).slice(-1)[0];
   return `<div class="weekcard">
     <div class="wtitle">${c().weekTitle}</div>
     <p class="wcount">${c().weekCount(wk.n)}</p>
     ${s ? `<div class="wrow"><span class="wlab">${c().weekTop}</span><span class="wval">${s.s} · ${wk.topSignalN}</span></div>`:''}
     ${wk.topReaction && REACTIONS[wk.topReaction] ? `<div class="wrow"><span class="wlab">${c().weekReact}</span><span class="wval">${REACTIONS[wk.topReaction][L]}</span></div>`:''}
     ${wk.wrote ? `<div class="wrow col"><span class="wlab">${c().weekWrote}</span><span class="wquote">“${esc(wk.wrote)}”</span></div>`:''}
+    ${bright ? `<div class="wrow col"><span class="wlab">${c().weekBrightLab}</span><span class="wquote">“${esc(bright.text)}”</span></div>`:''}
     ${s ? `<div class="wcarry"><span class="wlab">${c().weekCarry}</span><p>${s.q}</p></div>`:''}
     <button class="wdismiss" onclick="dismissWeek('${wk.weekKey}')">${c().weekDismiss}</button>
   </div>`;
@@ -1556,12 +1564,12 @@ function revealView(){
       <p class="body">${c().mirrorB}</p>
       <div class="chose">
         <div class="lab">${c().youChose}</div>
-        <div class="quote">「${m.signal==='other'? esc((m.other||{}).signal||'') : s.s}」</div>
+        <div class="quote">「${m.signal==='other' ? (esc((m.other||{}).signal||'') || c().offListWord) : s.s}」</div>
         <div class="lab">${c().andAlso}</div>
         <div class="quote">「${m.intensity?INTENSITY[m.intensity][L]:''}」</div>
       </div>
       <div class="saidcard"><div class="who">${c().speaker}</div>
-        <p>${c().mirrorPromise(m.signal==='other' ? (m.otherText||'') : s.n)}</p></div>
+        <p>${m.signal==='other' ? c().mirrorPromiseOff : c().mirrorPromise(s.n)}</p></div>
       ${nextBtn(c().done)}`;
   }
 

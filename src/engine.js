@@ -43,7 +43,7 @@ const KYP = (() => {
 
   /* ---------- 1. connection: has this signal been here before? ---------- */
   function connection(ms, current){
-    if(!current.signal) return null;
+    if(!current.signal || current.signal === 'other') return null;   // off-list is vocabulary feedback, not a repeat
     const prior = ms.filter(m => m.id !== current.id && m.signal === current.signal);
     if(prior.length < TH.connectMin - 1) return null;
     const last = prior[prior.length-1];
@@ -145,7 +145,7 @@ const KYP = (() => {
   }
 
   function changesAll(ms){
-    return distinct(ms.map(m=>m.signal).filter(Boolean))
+    return distinct(ms.map(m=>m.signal).filter(s => s && s !== 'other'))   // off-list is not a signal
       .map(s=>change(ms,s)).filter(Boolean).sort((a,b)=>b.n-a.n);
   }
 
