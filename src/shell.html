@@ -277,6 +277,32 @@ textarea::placeholder{color:var(--ink3)}
   margin-bottom:22px;animation:develop .7s var(--ease) both}
 .logomark.sm{width:56px;height:46px;margin-bottom:14px}
 @media(prefers-reduced-motion:reduce){.logomark{animation:none}}
+/* the letting-go beat: the moment settles into the archive, and you breathe */
+.letgo{flex:1 1 auto;display:flex;flex-direction:column}
+.lgcard{background:var(--surface2);border-radius:var(--r-lg);padding:18px 18px;margin:2px 0 24px;
+  transform-origin:top center;animation:settle 2.2s var(--ease) both}
+.lgcard .lgtext{font-family:var(--serif);font-size:18px;line-height:1.42;color:var(--ink);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.lgcard .lgsig{font-size:12.5px;font-weight:600;color:var(--ink3);margin-top:11px}
+@keyframes settle{
+  from{opacity:1;transform:none;filter:none}
+  60%{opacity:.5;transform:translateY(9px) scaleY(.99);filter:saturate(.5) brightness(.9)}
+  to{opacity:.3;transform:translateY(15px) scaleY(.972);filter:saturate(.35) brightness(.82)}
+}
+.lgbreath{display:flex;justify-content:center;margin:2px 0 22px}
+.lgbreath i{width:13px;height:13px;border-radius:50%;
+  background:radial-gradient(circle at 50% 42%,var(--accent-2),var(--accent));
+  box-shadow:0 0 22px -2px var(--accent-line);animation:breathe 4.4s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(.72);opacity:.4}50%{transform:scale(1.6);opacity:.92}}
+.lgline{font-family:var(--serif);font-size:21px;line-height:1.42;letter-spacing:-.01em;
+  color:var(--ink);margin:0 0 8px;animation:develop .7s .15s var(--ease) both}
+.lgsub{font-size:13.5px;line-height:1.6;color:var(--ink3);margin:0;animation:develop .7s .3s var(--ease) both}
+.letgo.compressed .lgcard{animation-duration:.85s}
+@media(prefers-reduced-motion:reduce){
+  .lgcard,.lgline,.lgsub{animation:none}
+  .lgcard{opacity:.5;transform:translateY(12px) scaleY(.98);filter:saturate(.5) brightness(.9)}
+  .lgbreath i{animation:none;transform:scale(1.05);opacity:.7}
+}
 .hidden{display:none !important}
 </style>
 </head>
