@@ -305,6 +305,7 @@ const STEPS = ['what','reaction','signal','intensity','response'];
 function renderFlow(){
   const f = flow; if(!f) return;
   const box = $('flowbox');
+  if(f.finishing){ box.innerHTML = letgoView(); box.scrollTop = 0; return; }
   if(f.step < STEPS.length){ box.innerHTML = stepView(STEPS[f.step]); }
   else { box.innerHTML = revealView(); }
   box.scrollTop = 0;
@@ -409,7 +410,7 @@ function revealView(){
   const f = flow, m = f.m, k = f.queue[f.qi];
   const s = sig(m.signal);
   const last = f.qi >= f.queue.length-1;
-  const nextBtn = t => `<div class="grow"></div><button class="cta" onclick="${last?'closeFlow()':'qNext()'}">${t}</button>`;
+  const nextBtn = t => `<div class="grow"></div><button class="cta" onclick="${last?'finishFlow()':'qNext()'}">${t}</button>`;
 
   if(k==='mirror'){
     return `<div class="eyebrow">${c().seconds(m.secs)}</div>
@@ -468,7 +469,7 @@ function revealView(){
       <textarea id="fNote" rows="3" placeholder="${c().yourReadPh}" oninput="setNote(this.value)"></textarea>
       <div class="grow"></div>
       <button class="cta" onclick="saveNote()">${c().keepWatching}</button>
-      <button class="cta ghost" onclick="${last?'closeFlow()':'qNext()'}">${c().skip}</button>`;
+      <button class="cta ghost" onclick="${last?'finishFlow()':'qNext()'}">${c().skip}</button>`;
   }
 
   if(k==='prediction'){
@@ -498,9 +499,35 @@ function revealView(){
   return nextBtn(c().done);
 }
 
-function qNext(){ flow.qi++; if(flow.qi>=flow.queue.length) closeFlow(); else renderFlow(); }
+/* ---------- the letting-go beat: an immediate exhale, before the moment is filed ---------- */
+function finishFlow(){
+  if(!flow) return;
+  flow.finishing = true;
+  D.seen = D.seen || {glimpse:{}, pattern:{}};
+  D.seen.letgo = (D.seen.letgo || 0) + 1;   // the ritual decays after the first few
+  persist();
+  renderFlow();
+}
+function letgoView(){
+  const m = flow.m, s = sig(m.signal);
+  const full = (D.seen.letgo || 0) <= 3;
+  const label = m.signal==='other' ? esc((m.other||{}).signal||'') : (s ? s.s : '');
+  return `<div class="letgo${full?'':' compressed'}">
+    <div class="lgcard">
+      <div class="lgtext">${esc(m.text)}</div>
+      ${label ? `<div class="lgsig">「${label}」</div>` : ''}
+    </div>
+    ${full ? `<div class="lgbreath"><i></i></div>` : ''}
+    <p class="lgline">${full ? c().letgoLine : c().letgoLineShort}</p>
+    ${full ? `<p class="lgsub">${c().letgoSub}</p>` : ''}
+    <div class="grow"></div>
+    <button class="cta ghost" onclick="closeFlow()">${c().letgoDone}</button>
+  </div>`;
+}
+
+function qNext(){ flow.qi++; if(flow.qi>=flow.queue.length) finishFlow(); else renderFlow(); }
 function saveNote(){ const v=$('fNote').value.trim(); flow.m.note=v; persist();
-  if(flow.qi>=flow.queue.length-1) closeFlow(); else qNext(); }
+  if(flow.qi>=flow.queue.length-1) finishFlow(); else qNext(); }
 function closePred(result){
   const p = flow.checkPred;
   p.status='closed'; p.result=result; p.closedTs=Date.now();
@@ -511,7 +538,7 @@ function closePred(result){
 function confirmPattern(v){
   flow.m.confirm = v;
   persist();
-  if(flow.qi>=flow.queue.length-1) closeFlow(); else qNext();
+  if(flow.qi>=flow.queue.length-1) finishFlow(); else qNext();
 }
 
 /* =====================================================================
