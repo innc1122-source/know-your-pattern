@@ -303,6 +303,15 @@ textarea::placeholder{color:var(--ink3)}
   .lgcard{opacity:.5;transform:translateY(12px) scaleY(.98);filter:saturate(.5) brightness(.9)}
   .lgbreath i{animation:none;transform:scale(1.05);opacity:.7}
 }
+/* the open-guess hook: a quiet re-entry loop on home, never a nudge to record */
+.guesshook{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+  background:var(--surface2);border:0;border-radius:var(--r-lg);padding:16px 18px;margin:14px 0 2px;
+  font-family:var(--sans);transition:transform .14s var(--ease),background .18s}
+.guesshook:active{transform:scale(.99)}
+.guesshook .ghmain{flex:1 1 auto;min-width:0}
+.guesshook .ghlead{font-family:var(--serif);font-size:18px;line-height:1.3;letter-spacing:-.01em;color:var(--ink)}
+.guesshook .ghsub{font-size:13px;font-weight:600;color:var(--ink3);margin-top:4px}
+.guesshook .gharrow{flex:0 0 auto;font-size:18px;color:var(--accent)}
 .hidden{display:none !important}
 </style>
 </head>
@@ -789,6 +798,16 @@ const C = {
   overDays:(n,d)=>`${n} moments over ${d} days`,
   predAccuracy:'How our guesses did',
   guessesRight:(h,t)=>`${h} of ${t} turned out right`,
+  knowingYou:'Getting to know you',
+  openGuessLead:n=>n===1?'One open guess':`${n} open guesses`,
+  guessPeek:"Peek at what it's guessing",
+  guessesTitle:"What it's guessing",
+  guessesScoreLead:'How well it knows you',
+  guessRejectHelps:'Telling it "no" is what teaches it.',
+  guessesIntro:"Now and then it makes a guess, then checks itself. Give it a few and you'll see how well it knows you.",
+  openGuessesHead:'Open guesses',
+  guessWaiting:"Not settled yet. Next time this happens, we'll know.",
+  noOpenGuesses:'No open guesses right now.',
   yourData:'Your data',exportB:'Export everything (JSON)',importB:'Import a backup',
   clearB:'Delete everything',clearConfirm:'Delete every moment permanently? This cannot be undone.',
   storageWarn:'This browser is not saving data between visits. Export before you close the tab.',
@@ -890,6 +909,16 @@ const C = {
   overDays:(n,d)=>`${n} 次记录，横跨 ${d} 天`,
   predAccuracy:'我们猜得怎么样',
   guessesRight:(h,t)=>`${t} 次里猜中了 ${h} 次`,
+  knowingYou:'它在慢慢懂你',
+  openGuessLead:n=>n===1?'还有一个开着的猜测':`还有 ${n} 个开着的猜测`,
+  guessPeek:'点开看看它在猜什么',
+  guessesTitle:'它在猜什么',
+  guessesScoreLead:'它有多懂你',
+  guessRejectHelps:'你说「不是」，反而帮它更懂你。',
+  guessesIntro:'它偶尔会押一个猜测，然后自己去验证。攒几次，你就能看出它有多懂你。',
+  openGuessesHead:'开着的猜测',
+  guessWaiting:'还没揭晓。等下次这种事发生，就知道准不准了。',
+  noOpenGuesses:'现在没有开着的猜测。',
   yourData:'你的数据',exportB:'导出全部（JSON）',importB:'导入备份',
   clearB:'删除全部',clearConfirm:'永久删除所有记录？无法撤销。',
   storageWarn:'这个浏览器没有在保存数据。关掉页面前请先导出。',
@@ -948,8 +977,8 @@ function fmtDate(ts){
 /* ---------- chrome ---------- */
 function render(){
   $('tabbar').innerHTML = ['home','patterns','changes','me'].map(t=>
-    `<button class="tb ${t===tab||(tab==='gaps'&&t==='me')?'on':''}" onclick="go('${t}')">${c()[t]}</button>`).join('');
-  const v = {home:viewHome,patterns:viewPatterns,changes:viewChanges,me:viewMe,gaps:viewGaps}[tab];
+    `<button class="tb ${t===tab||(tab==='gaps'&&t==='me')||(tab==='guesses'&&t==='home')?'on':''}" onclick="go('${t}')">${c()[t]}</button>`).join('');
+  const v = {home:viewHome,patterns:viewPatterns,changes:viewChanges,me:viewMe,gaps:viewGaps,guesses:viewGuesses}[tab];
   $('view').innerHTML = v();
   $('view').scrollTop = 0;
   $('storagewarn').classList.toggle('hidden', Store.persistent);
@@ -971,6 +1000,7 @@ function viewHome(){
     <div class="eyebrow">${ms.length ? c().momentsCount(ms.length) : ''}</div>
     <h1 class="lede">${c().somethingHappened}</h1>
     <button class="cta" onclick="startFlow()">${c().catchOne}</button>
+    ${predHook()}
 
     <div class="rule"></div>
     <div class="eyebrow mb">${c().showingUp}</div>
@@ -1004,6 +1034,47 @@ function weekCard(wk){
   </div>`;
 }
 function dismissWeek(k){ D.seen = D.seen||{glimpse:{},pattern:{}}; D.seen.week = k; persist(); render(); }
+
+/* ---------- prediction as the product's game: it bets, you judge ----------
+   The hit-rate is framed as "how well it knows you", never a score to optimise.
+   An open guess is a re-entry loop, not a nudge to record. */
+function predHook(){
+  const open = D.predictions.filter(p=>p.status==='open');
+  const score = KYP.predictionScore(D.predictions);
+  if(!open.length && !score) return '';
+  const lead = open.length ? c().openGuessLead(open.length) : c().knowingYou;
+  const sub  = score ? c().guessesRight(score.hit, score.total) : c().guessPeek;
+  return `<button class="guesshook" onclick="go('guesses')">
+    <div class="ghmain"><div class="ghlead">${lead}</div><div class="ghsub">${sub}</div></div>
+    <div class="gharrow">&rarr;</div>
+  </button>`;
+}
+
+function viewGuesses(){
+  const open = D.predictions.filter(p=>p.status==='open').slice().reverse();
+  const score = KYP.predictionScore(D.predictions);
+  let out = `<div class="pad">
+    <button class="more" style="text-align:left;padding-left:0" onclick="go('home')">&larr; ${c().home}</button>
+    <div class="eyebrow">${c().guessesTitle}</div>`;
+  if(score){
+    out += `<h1 class="lede sm">${c().guessesScoreLead}</h1>
+      <div class="saidcard"><div class="who">${c().speaker}</div><p>${c().guessesRight(score.hit,score.total)}</p></div>
+      <p class="note">${c().guessRejectHelps}</p>`;
+  } else {
+    out += `<p class="body">${c().guessesIntro}</p>`;
+  }
+  out += `<div class="rule"></div><div class="eyebrow mb">${c().openGuessesHead}</div>`;
+  if(open.length){
+    out += open.map(p=>{
+      const s = sig(p.signal);
+      return `<div class="saidcard"><div class="who">${c().ourGuess}</div><p>${s?s.p:''}</p></div>
+        <p class="note" style="margin:-8px 0 18px">${c().guessWaiting} · ${fmtDate(p.createdTs)}</p>`;
+    }).join('');
+  } else {
+    out += `<p class="note">${c().noOpenGuesses}</p>`;
+  }
+  return out + '</div>';
+}
 
 function patternSentence(s){
   return `<div class="contrast">

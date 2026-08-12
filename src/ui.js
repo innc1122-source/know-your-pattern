@@ -24,8 +24,8 @@ function fmtDate(ts){
 /* ---------- chrome ---------- */
 function render(){
   $('tabbar').innerHTML = ['home','patterns','changes','me'].map(t=>
-    `<button class="tb ${t===tab||(tab==='gaps'&&t==='me')?'on':''}" onclick="go('${t}')">${c()[t]}</button>`).join('');
-  const v = {home:viewHome,patterns:viewPatterns,changes:viewChanges,me:viewMe,gaps:viewGaps}[tab];
+    `<button class="tb ${t===tab||(tab==='gaps'&&t==='me')||(tab==='guesses'&&t==='home')?'on':''}" onclick="go('${t}')">${c()[t]}</button>`).join('');
+  const v = {home:viewHome,patterns:viewPatterns,changes:viewChanges,me:viewMe,gaps:viewGaps,guesses:viewGuesses}[tab];
   $('view').innerHTML = v();
   $('view').scrollTop = 0;
   $('storagewarn').classList.toggle('hidden', Store.persistent);
@@ -47,6 +47,7 @@ function viewHome(){
     <div class="eyebrow">${ms.length ? c().momentsCount(ms.length) : ''}</div>
     <h1 class="lede">${c().somethingHappened}</h1>
     <button class="cta" onclick="startFlow()">${c().catchOne}</button>
+    ${predHook()}
 
     <div class="rule"></div>
     <div class="eyebrow mb">${c().showingUp}</div>
@@ -80,6 +81,47 @@ function weekCard(wk){
   </div>`;
 }
 function dismissWeek(k){ D.seen = D.seen||{glimpse:{},pattern:{}}; D.seen.week = k; persist(); render(); }
+
+/* ---------- prediction as the product's game: it bets, you judge ----------
+   The hit-rate is framed as "how well it knows you", never a score to optimise.
+   An open guess is a re-entry loop, not a nudge to record. */
+function predHook(){
+  const open = D.predictions.filter(p=>p.status==='open');
+  const score = KYP.predictionScore(D.predictions);
+  if(!open.length && !score) return '';
+  const lead = open.length ? c().openGuessLead(open.length) : c().knowingYou;
+  const sub  = score ? c().guessesRight(score.hit, score.total) : c().guessPeek;
+  return `<button class="guesshook" onclick="go('guesses')">
+    <div class="ghmain"><div class="ghlead">${lead}</div><div class="ghsub">${sub}</div></div>
+    <div class="gharrow">&rarr;</div>
+  </button>`;
+}
+
+function viewGuesses(){
+  const open = D.predictions.filter(p=>p.status==='open').slice().reverse();
+  const score = KYP.predictionScore(D.predictions);
+  let out = `<div class="pad">
+    <button class="more" style="text-align:left;padding-left:0" onclick="go('home')">&larr; ${c().home}</button>
+    <div class="eyebrow">${c().guessesTitle}</div>`;
+  if(score){
+    out += `<h1 class="lede sm">${c().guessesScoreLead}</h1>
+      <div class="saidcard"><div class="who">${c().speaker}</div><p>${c().guessesRight(score.hit,score.total)}</p></div>
+      <p class="note">${c().guessRejectHelps}</p>`;
+  } else {
+    out += `<p class="body">${c().guessesIntro}</p>`;
+  }
+  out += `<div class="rule"></div><div class="eyebrow mb">${c().openGuessesHead}</div>`;
+  if(open.length){
+    out += open.map(p=>{
+      const s = sig(p.signal);
+      return `<div class="saidcard"><div class="who">${c().ourGuess}</div><p>${s?s.p:''}</p></div>
+        <p class="note" style="margin:-8px 0 18px">${c().guessWaiting} · ${fmtDate(p.createdTs)}</p>`;
+    }).join('');
+  } else {
+    out += `<p class="note">${c().noOpenGuesses}</p>`;
+  }
+  return out + '</div>';
+}
 
 function patternSentence(s){
   return `<div class="contrast">
