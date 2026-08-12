@@ -303,6 +303,15 @@ textarea::placeholder{color:var(--ink3)}
   .lgcard{opacity:.5;transform:translateY(12px) scaleY(.98);filter:saturate(.5) brightness(.9)}
   .lgbreath i{animation:none;transform:scale(1.05);opacity:.7}
 }
+/* the open-guess hook: a quiet re-entry loop on home, never a nudge to record */
+.guesshook{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+  background:var(--surface2);border:0;border-radius:var(--r-lg);padding:16px 18px;margin:14px 0 2px;
+  font-family:var(--sans);transition:transform .14s var(--ease),background .18s}
+.guesshook:active{transform:scale(.99)}
+.guesshook .ghmain{flex:1 1 auto;min-width:0}
+.guesshook .ghlead{font-family:var(--serif);font-size:18px;line-height:1.3;letter-spacing:-.01em;color:var(--ink)}
+.guesshook .ghsub{font-size:13px;font-weight:600;color:var(--ink3);margin-top:4px}
+.guesshook .gharrow{flex:0 0 auto;font-size:18px;color:var(--accent)}
 .hidden{display:none !important}
 </style>
 </head>

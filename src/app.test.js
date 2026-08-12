@@ -145,6 +145,24 @@ t('closed as miss', w.__kyp.D.predictions.some(p => p.status === 'closed' && p.r
 await drain();
 t('flow closed', !doc.getElementById('overlay').classList.contains('on'));
 
+console.log('\n6b. predictions become a home hook + a guesses view');
+{
+  wipe();
+  w.__kyp.D.predictions.push(
+    { id:'pt1', signal:'autonomy', createdTs: Date.now()-20*DAY, status:'closed', result:'yes' },
+    { id:'pt2', signal:'autonomy', createdTs: Date.now()-10*DAY, status:'closed', result:'no' },
+    { id:'pt3', signal:'autonomy', createdTs: Date.now()- 2*DAY, status:'open',   result:null });
+  w.go('home');
+  t('home surfaces the open guess as a re-entry loop', txt().includes('开着的猜测'), txt().slice(0,160));
+  t('home shows the knowing-you number', /次里猜中了/.test(txt()), txt().slice(0,160));
+  w.go('guesses');
+  t('guesses view frames it as knowing you, not a score', txt().includes('它有多懂你'), txt().slice(0,160));
+  t('guesses view says rejection is what teaches it', txt().includes('更懂你'), txt().slice(0,160));
+  t('guesses view surfaces the open bet', txt().includes('我们猜一下'), txt().slice(0,200));
+  t('guesses keeps the home tab lit', doc.querySelectorAll('#tabbar .tb.on').length === 1);
+  w.go('home');
+}
+
 console.log('\n7. a real pattern arrives, with calibration');
 wipe();
 [30, 23, 16, 9].forEach((d, i) => seed(d, 'autonomy', i < 2 ? 'react_now' : 'held_in', '记录' + i));
