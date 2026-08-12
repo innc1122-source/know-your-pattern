@@ -26,6 +26,11 @@ console.log('\n2. connection fires on the 2nd occurrence, not the 1st');
   t('2nd same-signal moment connects', KYP.connection([a,b], b) !== null);
   const c = M(1,'fairness','paused');
   t('different signal does not connect', KYP.connection([a,c], c) === null);
+  const o1 = M(3,'other','react_now'), o2 = M(1,'other','held_in');
+  t('off-list "other" never connects', KYP.connection([o1,o2], o2) === null);
+  const offMany = Array.from({length:8},(_,i)=>M(80-i*10,'other', i<4?'react_now':'paused'));
+  t('off-list never becomes a change reading', KYP.changesAll(offMany).length === 0,
+     JSON.stringify(KYP.changesAll(offMany).map(x=>x.signal)));
 }
 
 console.log('\n3. glimpse needs count AND day-spread');

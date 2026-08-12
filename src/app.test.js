@@ -197,6 +197,40 @@ console.log('\n6d. the light lane keeps a note without touching the engine');
   t('the note shows on home', txt().includes('路边的花开了'), txt().slice(0,160));
 }
 
+console.log('\n6e. off-list moments are received warmly, not left empty');
+{
+  wipe();
+  w.startFlow();
+  const a = doc.getElementById('fWhat');
+  a.value = '一种说不清的别扭'; a.dispatchEvent(new w.Event('input',{bubbles:true}));
+  await fc('下一步'); await fc('不是吧');
+  await fc('都不是');
+  const ot = doc.getElementById('fOther_signal');
+  t('off-list opens a custom field', !!ot);
+  ot.value = '插不上话'; ot.dispatchEvent(new w.Event('input',{bubbles:true}));
+  await fc('下一步');
+  await fc('当时挺明显的'); await fc('先停了一下');
+  t('off-list mirror is warm, not empty', ftxt().includes('不在我的词表里'), ftxt().slice(0,160));
+  t('off-list keeps the typed word', ftxt().includes('插不上话'), ftxt().slice(0,160));
+  t('no empty-quote bug', !/「」/.test(ftxt()), ftxt().slice(0,160));
+  await fc('完成'); await fc('放下');
+  t('off-list moment saved', w.__kyp.D.moments.some(m=>m.signal==='other'));
+}
+
+console.log('\n6f. a bright note surfaces in the weekly review');
+{
+  wipe();
+  seed(9,'autonomy','react_now','上上周');
+  seed(3,'autonomy','held_in','这周甲');
+  seed(1,'autonomy','paused','这周乙');
+  w.__kyp.D.notes.push({id:'bn1', ts:Date.now()-2*DAY, text:'今天被夸了', bright:true});
+  w.__kyp.D.seen = {glimpse:{},pattern:{}};
+  w.go('home');
+  t('weekly card shows', txt().includes('你这一周的观察'), txt().slice(0,120));
+  t('bright note surfaces in the week', txt().includes('这周你也留下过一个亮的时刻'), txt().slice(0,200));
+  t('and it quotes the bright note', txt().includes('今天被夸了'), txt().slice(0,200));
+}
+
 console.log('\n7. a real pattern arrives, with calibration');
 wipe();
 [30, 23, 16, 9].forEach((d, i) => seed(d, 'autonomy', i < 2 ? 'react_now' : 'held_in', '记录' + i));

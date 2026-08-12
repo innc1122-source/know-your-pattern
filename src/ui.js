@@ -32,7 +32,7 @@ function render(){
   $('storagewarn').textContent = c().storageWarn;
 }
 function go(t){ tab=t; render(); }
-function setLang(l){ L=l; persist(); render(); if(flow) renderFlow(); }
+function setLang(l){ L=l; persist(); render(); if(flow) renderFlow(); if(note) renderNote(); }
 
 /* ---------- home ---------- */
 function viewHome(){
@@ -67,12 +67,14 @@ function viewHome(){
 
 function weekCard(wk){
   const s = wk.topSignal ? sig(wk.topSignal) : null;
+  const bright = (D.notes||[]).filter(nn=>nn.bright && nn.ts > Date.now()-7*86400000).slice(-1)[0];
   return `<div class="weekcard">
     <div class="wtitle">${c().weekTitle}</div>
     <p class="wcount">${c().weekCount(wk.n)}</p>
     ${s ? `<div class="wrow"><span class="wlab">${c().weekTop}</span><span class="wval">${s.s} · ${wk.topSignalN}</span></div>`:''}
     ${wk.topReaction && REACTIONS[wk.topReaction] ? `<div class="wrow"><span class="wlab">${c().weekReact}</span><span class="wval">${REACTIONS[wk.topReaction][L]}</span></div>`:''}
     ${wk.wrote ? `<div class="wrow col"><span class="wlab">${c().weekWrote}</span><span class="wquote">“${esc(wk.wrote)}”</span></div>`:''}
+    ${bright ? `<div class="wrow col"><span class="wlab">${c().weekBrightLab}</span><span class="wquote">“${esc(bright.text)}”</span></div>`:''}
     ${s ? `<div class="wcarry"><span class="wlab">${c().weekCarry}</span><p>${s.q}</p></div>`:''}
     <button class="wdismiss" onclick="dismissWeek('${wk.weekKey}')">${c().weekDismiss}</button>
   </div>`;
@@ -586,12 +588,12 @@ function revealView(){
       <p class="body">${c().mirrorB}</p>
       <div class="chose">
         <div class="lab">${c().youChose}</div>
-        <div class="quote">「${m.signal==='other'? esc((m.other||{}).signal||'') : s.s}」</div>
+        <div class="quote">「${m.signal==='other' ? (esc((m.other||{}).signal||'') || c().offListWord) : s.s}」</div>
         <div class="lab">${c().andAlso}</div>
         <div class="quote">「${m.intensity?INTENSITY[m.intensity][L]:''}」</div>
       </div>
       <div class="saidcard"><div class="who">${c().speaker}</div>
-        <p>${c().mirrorPromise(m.signal==='other' ? (m.otherText||'') : s.n)}</p></div>
+        <p>${m.signal==='other' ? c().mirrorPromiseOff : c().mirrorPromise(s.n)}</p></div>
       ${nextBtn(c().done)}`;
   }
 
