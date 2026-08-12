@@ -610,6 +610,10 @@ function finishFlow(){
   flow.finishing = true;
   D.seen = D.seen || {glimpse:{}, pattern:{}};
   D.seen.letgo = (D.seen.letgo || 0) + 1;   // the ritual decays after the first few
+  const pool = c().letgoLines, n = pool.length;   // rotate the closing line, never the same twice running
+  let i = Math.floor(Math.random()*n);
+  if(n > 1 && i === D.seen.letgoLast) i = (i+1) % n;
+  D.seen.letgoLast = i; flow.letgoIdx = i;
   persist();
   renderFlow();
 }
@@ -617,14 +621,15 @@ function letgoView(){
   const m = flow.m, s = sig(m.signal);
   const full = (D.seen.letgo || 0) <= 3;
   const label = m.signal==='other' ? esc((m.other||{}).signal||'') : (s ? s.s : '');
+  const pool = c().letgoLines;
+  const line = pool[(flow.letgoIdx || 0) % pool.length];
   return `<div class="letgo${full?'':' compressed'}">
     <div class="lgcard">
       <div class="lgtext">${esc(m.text)}</div>
       ${label ? `<div class="lgsig">「${label}」</div>` : ''}
     </div>
     ${full ? `<div class="lgbreath"><i></i></div>` : ''}
-    <p class="lgline">${full ? c().letgoLine : c().letgoLineShort}</p>
-    ${full ? `<p class="lgsub">${c().letgoSub}</p>` : ''}
+    <p class="lgline">${line}</p>
     <div class="grow"></div>
     <button class="cta ghost" onclick="closeFlow()">${c().letgoDone}</button>
   </div>`;
