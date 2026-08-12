@@ -176,6 +176,27 @@ console.log('\n6c. a change can be developed into a keepsake card');
   w.go('home');
 }
 
+console.log('\n6d. the light lane keeps a note without touching the engine');
+{
+  wipe();
+  w.startNote();
+  const nt = doc.getElementById('nText');
+  t('light-note screen opens', !!nt && doc.getElementById('overlay').classList.contains('on'));
+  nt.value = '路边的花开了'; nt.dispatchEvent(new w.Event('input',{bubbles:true}));
+  const bright = btns().find(b=>b.textContent.includes('这是好的'));
+  t('a good-mark is offered', !!bright); if(bright) bright.click(); await wait(60);
+  const save = btns().find(b=>b.textContent.includes('保存'));
+  t('save appears once there is text', !!save); if(save) save.click(); await wait(60);
+  t('stored in notes, not moments', w.__kyp.D.notes.length===1 && w.__kyp.D.moments.length===0, JSON.stringify(w.__kyp.D.notes));
+  t('kept the good mark', w.__kyp.D.notes[0].bright===true);
+  t('note carries no signal — engine never sees it', !('signal' in w.__kyp.D.notes[0]));
+  t('the light coda offers a quiet close', btns().some(b=>b.textContent.includes('放下')));
+  btns().find(b=>b.textContent.includes('放下')).click(); await wait(60);
+  t('overlay closed after the note', !doc.getElementById('overlay').classList.contains('on'));
+  w.go('home');
+  t('the note shows on home', txt().includes('路边的花开了'), txt().slice(0,160));
+}
+
 console.log('\n7. a real pattern arrives, with calibration');
 wipe();
 [30, 23, 16, 9].forEach((d, i) => seed(d, 'autonomy', i < 2 ? 'react_now' : 'held_in', '记录' + i));
