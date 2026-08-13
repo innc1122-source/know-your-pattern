@@ -229,6 +229,26 @@ console.log('\n6f. a bright note surfaces in the weekly review');
   t('weekly card shows', txt().includes('你这一周的观察'), txt().slice(0,120));
   t('bright note surfaces in the week', txt().includes('这周你也留下过一个亮的时刻'), txt().slice(0,200));
   t('and it quotes the bright note', txt().includes('今天被夸了'), txt().slice(0,200));
+  t('no duplicate standalone echo when the week card carries it', !txt().includes('这周，有一个亮的时刻'), txt().slice(0,200));
+}
+
+console.log('\n6g. a quiet, notes-only week still echoes the bright moment');
+{
+  wipe();
+  // old moments only: a week of history exists, but nothing recent — the engine cards nothing
+  seed(15,'autonomy','react_now','很久以前');
+  seed(12,'autonomy','held_in','也很久以前');
+  w.__kyp.D.notes.push({id:'bn2', ts:Date.now()-DAY, text:'路上有人帮了我一把', bright:true});
+  w.__kyp.D.seen = {glimpse:{},pattern:{}};
+  w.go('home');
+  t('no moment-based week card this week', !txt().includes('你这一周的观察'), txt().slice(0,140));
+  t('but the bright moment still echoes', txt().includes('这周，有一个亮的时刻'), txt().slice(0,160));
+  t('and it quotes the note', txt().includes('路上有人帮了我一把'), txt().slice(0,160));
+  const db = doc.getElementById('view').querySelector('.wdismiss');
+  t('the echo can be dismissed', !!db);
+  db.click(); await wait(60);
+  t('once dismissed it stays quiet', !txt().includes('这周，有一个亮的时刻'), txt().slice(0,160));
+  t('the note stays out of the engine', w.__kyp.D.notes.length===1 && !('signal' in w.__kyp.D.notes[0]) && w.__kyp.D.moments.length===2);
 }
 
 console.log('\n7. a real pattern arrives, with calibration');
