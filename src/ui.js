@@ -53,6 +53,7 @@ function viewHome(){
     <button class="cta" onclick="startFlow()">${c().catchOne}</button>
     <button class="cta ghost notecta" onclick="startNote()">${c().noteCta}</button>
     ${predHook()}
+    ${formingCard()}
 
     <div class="rule"></div>
     <div class="eyebrow mb">${c().showingUp}</div>
@@ -111,6 +112,26 @@ function predHook(){
   return `<button class="guesshook" onclick="go('guesses')">
     <div class="ghmain"><div class="ghlead">${lead}</div><div class="ghsub">${sub}</div></div>
     <div class="gharrow">&rarr;</div>
+  </button>`;
+}
+
+/* the middle stretch made visible: before a comparison is earned, show the
+   picture as it stands and let it move — the reward is watching it form, not
+   a countdown. snapshotNow claims only the current mix, never a trend. */
+function formingCard(){
+  const up = KYP.unlockProgress(D.moments);
+  if(!up.signal) return '';
+  if(KYP.change(D.moments, up.signal)) return '';        // already unlocked — the Changes tab holds the real thing
+  const snap = KYP.snapshotNow(D.moments, up.signal);
+  if(!snap) return '';                                   // needs 3 responses on this signal
+  const s = sig(snap.signal), top = snap.mix[0];
+  const resp = RESPONSES[top.response] ? RESPONSES[top.response][L] : '';
+  const filled = Math.round(Math.min(1, snap.n / KYP.TH.changeMin) * 100);
+  return `<button class="formcard" onclick="go('changes')">
+    <div class="eyebrow">${c().formingNow}</div>
+    <p class="formmix">${c().formingMix(s.n, resp, top.pct)}</p>
+    <div class="formbar"><i style="width:${filled}%"></i></div>
+    <p class="formwatch">${c().formingWatch}</p>
   </button>`;
 }
 
@@ -610,6 +631,10 @@ function revealView(){
   const nextBtn = t => `<div class="grow"></div><button class="cta" onclick="${last?'finishFlow()':'qNext()'}">${t}</button>`;
 
   if(k==='mirror'){
+    // don't re-promise "if it shows up again, we'll tell you" on a signal that already has —
+    // once it's a repeat, a quiet acknowledgement, and the connection/glimpse card carries the detail
+    const priorSame = m.signal!=='other' && D.moments.filter(x=>x.id!==m.id && x.signal===m.signal).length > 0;
+    const mline = m.signal==='other' ? c().mirrorPromiseOff : (priorSame ? c().mirrorAgain(s.n) : c().mirrorPromise(s.n));
     return `<div class="eyebrow">${c().seconds(m.secs)}</div>
       <h1 class="lede sm">${c().mirrorH}</h1>
       <p class="body">${c().mirrorB}</p>
@@ -620,7 +645,7 @@ function revealView(){
         <div class="quote">「${m.intensity?INTENSITY[m.intensity][L]:''}」</div>
       </div>
       <div class="saidcard"><div class="who">${c().speaker}</div>
-        <p>${m.signal==='other' ? c().mirrorPromiseOff : c().mirrorPromise(s.n)}</p></div>
+        <p>${mline}</p></div>
       ${aiOn() ? `<div class="aiwrap">
         <button id="aiBtn" class="cta ghost" onclick="askReflection()">${c().aiCta}</button>
         <div id="aiOut" class="aiout"></div>

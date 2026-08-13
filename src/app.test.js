@@ -335,6 +335,47 @@ console.log('\n6i. direct-key mode calls the model straight from the browser');
   t('a saved key persists', w.__kyp.D.ai.key==='sk-ant-saved', JSON.stringify(w.__kyp.D.ai));
 }
 
+console.log('\n6j. the forming middle shows a living picture before the unlock');
+{
+  // three on one signal, all recent → a current picture exists, but no comparison yet
+  wipe();
+  seed(3,'autonomy','held_in','排期被改');
+  seed(2,'autonomy','react_now','又被改');
+  seed(1,'autonomy','held_in','再一次');
+  w.go('home');
+  t('the forming card appears', txt().includes('正在成形'), txt().slice(0,160));
+  t('it names the current picture', txt().includes('自主权') && /%/.test(txt()), txt().slice(0,200));
+  t('it is a button into the changes view', !!doc.getElementById('view').querySelector('.formcard'));
+  doc.getElementById('view').querySelector('.formcard').click(); await wait(40);
+  t('tapping it opens changes', txt().includes('你的变化会出现在这里') || txt().includes('现在的你'), txt().slice(0,120));
+
+  // fewer than three responses on any signal → nothing to show yet
+  wipe();
+  seed(2,'autonomy','held_in','一');
+  seed(1,'autonomy','react_now','二');
+  w.go('home');
+  t('no forming card before three', !txt().includes('正在成形'), txt().slice(0,120));
+
+  // once a real comparison unlocks, the forming card steps aside for the Changes tab
+  wipe();
+  [30,25,20,15,10,5].forEach((d,i)=>seed(d,'autonomy', i<3?'react_now':'held_in','记'+i));
+  w.go('home');
+  t('forming card gone once unlocked', !txt().includes('正在成形'), txt().slice(0,120));
+  t('and the change really did unlock', w.__kyp.KYP.changesAll(w.__kyp.D.moments).length>0);
+}
+
+console.log('\n6k. the mirror stops re-promising once a signal repeats');
+{
+  wipe();
+  await capture('第一次','autonomy','held_in');
+  t('first time: it promises to watch for it', ftxt().includes('如果它再出现'), ftxt().slice(0,140));
+  w.closeFlow();
+  await capture('又一次','autonomy','react_now');
+  t('repeat: a quiet acknowledgement instead', ftxt().includes('又是') && ftxt().includes('自主权'), ftxt().slice(0,140));
+  t('repeat: no hollow re-promise', !ftxt().includes('如果它再出现'), ftxt().slice(0,140));
+  w.closeFlow();
+}
+
 console.log('\n7. a real pattern arrives, with calibration');
 wipe();
 [30, 23, 16, 9].forEach((d, i) => seed(d, 'autonomy', i < 2 ? 'react_now' : 'held_in', '记录' + i));
