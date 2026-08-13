@@ -4,9 +4,14 @@ A tiny [Cloudflare Worker](https://developers.cloudflare.com/workers/) that hold
 your Anthropic API key and turns one captured moment into a short reflective note.
 The app calls this Worker; **the key never reaches the browser.**
 
-The app works completely without it. This is opt-in: until you paste a Worker URL
-into the app's settings, no reflection button appears and nothing ever leaves your
-device.
+The app works completely without it. This is opt-in: until you set it up in the
+app's settings, no reflection button appears and nothing ever leaves your device.
+
+> **Just want it working for yourself?** You don't need this Worker at all. The
+> app's settings also take an Anthropic key directly — it stays in your browser
+> and calls the model itself, nothing to deploy. This Worker is the sturdier path
+> for **hiding the key** once other people use it; it's the first step toward the
+> multi-user / end-to-end phase.
 
 ## What leaves your device when you tap "reflect"
 
