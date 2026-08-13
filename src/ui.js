@@ -41,9 +41,12 @@ function viewHome(){
   const max = r.length ? r[0].n : 1;
   const wk = KYP.weeklySnapshot(ms);
   const showWeek = wk && (D.seen||{}).week !== wk.weekKey;
+  // when there's no moment-based week card to carry it, a bright note still gets a small standalone echo
+  const bright = brightThisWeek();
+  const showBright = !wk && bright && (D.seen||{}).bright !== bright.id;
   return `
   <div class="pad">
-    ${showWeek ? weekCard(wk) : ''}
+    ${showWeek ? weekCard(wk) : (showBright ? brightCard(bright) : '')}
     <div class="eyebrow">${ms.length ? c().momentsCount(ms.length) : ''}</div>
     <h1 class="lede">${c().somethingHappened}</h1>
     <button class="cta" onclick="startFlow()">${c().catchOne}</button>
@@ -65,9 +68,13 @@ function viewHome(){
   </div>`;
 }
 
+// the latest bright note from the last 7 days — a UI concern only; light notes never reach the engine
+function brightThisWeek(){
+  return (D.notes||[]).filter(nn=>nn.bright && nn.ts > Date.now()-7*86400000).slice(-1)[0] || null;
+}
 function weekCard(wk){
   const s = wk.topSignal ? sig(wk.topSignal) : null;
-  const bright = (D.notes||[]).filter(nn=>nn.bright && nn.ts > Date.now()-7*86400000).slice(-1)[0];
+  const bright = brightThisWeek();
   return `<div class="weekcard">
     <div class="wtitle">${c().weekTitle}</div>
     <p class="wcount">${c().weekCount(wk.n)}</p>
@@ -80,6 +87,16 @@ function weekCard(wk){
   </div>`;
 }
 function dismissWeek(k){ D.seen = D.seen||{glimpse:{},pattern:{}}; D.seen.week = k; persist(); render(); }
+
+// a quiet week — only light notes, nothing the engine would card — still deserves to echo the bright one
+function brightCard(bright){
+  return `<div class="weekcard">
+    <div class="wtitle">${c().weekBrightTitle}</div>
+    <p class="wbright">“${esc(bright.text)}”</p>
+    <button class="wdismiss" onclick="dismissBright('${bright.id}')">${c().weekDismiss}</button>
+  </div>`;
+}
+function dismissBright(id){ D.seen = D.seen||{glimpse:{},pattern:{}}; D.seen.bright = id; persist(); render(); }
 
 /* ---------- prediction as the product's game: it bets, you judge ----------
    The hit-rate is framed as "how well it knows you", never a score to optimise.
