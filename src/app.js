@@ -206,6 +206,17 @@ const C = {
   offListWord:'hard to name',
   weekBrightLab:'A bright moment you kept this week',
   weekBrightTitle:'A bright moment this week',
+  aiT:'AI reflection (optional)',
+  aiB:'Connect your own backend and, when you record something, it can read this moment and a few recent ones and answer with one real line — not a template. Data leaves your device only when you tap it, and your bright notes are never sent.',
+  aiUrlPh:'https://…workers.dev',
+  aiTokenPh:'Access token (optional)',
+  aiSave:'Save',
+  aiSaved:'Saved',
+  aiCta:'Ask for a real reflection',
+  aiThinking:'Reading what you wrote…',
+  aiErr:"Couldn't reach it — check the backend URL in settings.",
+  aiWho:'After reading',
+  aiSends:'Reads this moment and a few recent ones — never your bright notes.',
   letgoLines:['Saved.','Kept.',"It's here now.",'All here.','Okay, kept.','Got it down.'],
   letgoDone:'Set it down',
   seconds:n=>n+' seconds',
@@ -326,6 +337,17 @@ const C = {
   offListWord:'说不清的那一下',
   weekBrightLab:'这周你也留下过一个亮的时刻',
   weekBrightTitle:'这周，有一个亮的时刻',
+  aiT:'AI 反思（可选）',
+  aiB:'接上你自己的后端后，记录时它可以读这一条和最近几条，用一句真实的话回应你——而不是模板。数据只在你按下的那一刻离开设备，「亮的时刻」永远不发出去。',
+  aiUrlPh:'https://…workers.dev',
+  aiTokenPh:'访问口令（可选）',
+  aiSave:'保存',
+  aiSaved:'已保存',
+  aiCta:'让它说点真的',
+  aiThinking:'在读你写的……',
+  aiErr:'没连上——检查设置里的后端地址。',
+  aiWho:'读完之后',
+  aiSends:'会读这一条和最近几条，不含「亮的时刻」。',
   letgoLines:['记下了。','收下了。','在这里了。','都在了。','好，收下了。','嗯，记下了。'],
   letgoDone:'放下',
   seconds:n=>n+' 秒',
@@ -393,7 +415,7 @@ const Store = (() => {
   let mem = null, ok = true;
   try { localStorage.setItem('kyp.t','1'); localStorage.removeItem('kyp.t'); }
   catch(e){ ok = false; }
-  const blank = () => ({moments:[], predictions:[], notes:[], lang:'zh', onboarded:false, created:Date.now()});
+  const blank = () => ({moments:[], predictions:[], notes:[], ai:{url:'',token:''}, lang:'zh', onboarded:false, created:Date.now()});
   return {
     persistent: ok,
     load(){

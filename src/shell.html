@@ -138,6 +138,11 @@ textarea{width:100%;font-family:var(--sans);font-size:16px;line-height:1.55;colo
   padding:14px 15px;resize:none;outline:none;transition:border-color .2s,background .2s}
 textarea:focus{border-color:var(--line2);background:var(--surface)}
 textarea::placeholder{color:var(--ink3)}
+.tin{width:100%;font-family:var(--sans);font-size:15px;color:var(--ink);background:var(--surface2);
+  border:1px solid transparent;border-radius:var(--r);padding:12px 14px;margin:0 0 10px;outline:none;
+  transition:border-color .2s,background .2s}
+.tin:focus{border-color:var(--line2);background:var(--surface)}
+.tin::placeholder{color:var(--ink3)}
 .seg{display:flex;gap:8px;background:var(--surface2);padding:4px;border-radius:999px}
 .seg button{flex:1;font-family:var(--sans);font-size:14.5px;font-weight:600;padding:11px;border:0;
   background:transparent;color:var(--ink2);border-radius:999px;cursor:pointer;transition:all .2s var(--ease)}
@@ -149,6 +154,18 @@ textarea::placeholder{color:var(--ink3)}
 .saidcard .who{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   color:var(--voice);margin-bottom:11px}
 .saidcard p{font-family:var(--serif);font-size:21px;line-height:1.4;letter-spacing:-.012em;margin:0;color:var(--ink)}
+
+/* opt-in AI reflection: sits under the mirror, only when a backend is set */
+.aiwrap{margin:2px 0 4px}
+.aisends{margin:8px 2px 0;font-size:12px;color:var(--ink3)}
+.aiout{margin:0}
+.aiout.thinking{font-size:14px;color:var(--ink3);padding:6px 2px;animation:pulse 1.4s ease-in-out infinite}
+.aiout.err{font-size:13.5px;color:var(--ink3);padding:6px 2px}
+.aiout.ready{background:var(--voice-soft);box-shadow:inset 0 0 0 1px rgba(123,224,214,.16);
+  border-radius:var(--r-lg);padding:20px 20px;margin-top:12px;animation:develop .62s var(--ease) both}
+.aiout.ready .who{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--voice);margin-bottom:10px}
+.aiout.ready p{font-family:var(--serif);font-size:18px;line-height:1.5;margin:0;color:var(--ink)}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
 
 .hl{background-image:linear-gradient(var(--hl),var(--hl));background-repeat:no-repeat;
   background-size:0% 42%;background-position:0 78%;transition:background-size .85s .25s var(--ease);

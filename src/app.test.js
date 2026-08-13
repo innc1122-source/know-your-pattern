@@ -251,6 +251,63 @@ console.log('\n6g. a quiet, notes-only week still echoes the bright moment');
   t('the note stays out of the engine', w.__kyp.D.notes.length===1 && !('signal' in w.__kyp.D.notes[0]) && w.__kyp.D.moments.length===2);
 }
 
+console.log('\n6h. AI reflection is opt-in, private, and degrades to nothing');
+{
+  // --- the payload builder: readable labels, moments only, never light notes ---
+  wipe();
+  seed(3,'autonomy','held_in','排期又被改了');
+  seed(1,'heard','react_now','会上没人接我的话');
+  w.__kyp.D.notes.push({id:'bnx', ts:Date.now(), text:'今天的秘密好心情', bright:true});
+  const cur = w.__kyp.D.moments[w.__kyp.D.moments.length-1];
+  const payload = w.__kyp.buildReflect(cur);
+  t('payload carries the current moment', !!payload.current && payload.current.text.includes('没人接我的话'), JSON.stringify(payload.current));
+  t('signal is a readable label, not a code', payload.current.signal==='被听见', payload.current.signal);
+  t('recent moments travel too, newest first', Array.isArray(payload.recent) && payload.recent.length===1 && payload.recent[0].text.includes('排期'), JSON.stringify(payload.recent));
+  t('a bright note never leaves the device', !JSON.stringify(payload).includes('秘密好心情'), JSON.stringify(payload).slice(0,200));
+  t('language rides along', payload.lang==='zh');
+
+  // --- off by default: no backend set → no button, nothing can be sent ---
+  wipe();
+  await capture('说点什么','autonomy','held_in');
+  t('the mirror is showing', doc.getElementById('overlay').classList.contains('on'));
+  t('no reflect button without a backend', !doc.getElementById('aiBtn'));
+  w.closeFlow();
+
+  // --- configured + success: one real line lands in a voice card ---
+  wipe();
+  w.__kyp.D.ai = { url:'https://reflect.test/x', token:'sekret' };
+  w.__kyp.D.notes.push({id:'bz', ts:Date.now(), text:'不该出现的亮点', bright:true});
+  let sent = null;
+  w.fetch = async (url, opts) => { sent = { url, opts }; return { ok:true, json: async()=>({ reflection:'看起来你更在意的是被听见。' }) }; };
+  await capture('会上又没人接话','heard','held_in');
+  t('reflect button appears when configured', !!doc.getElementById('aiBtn'), ftxt().slice(0,80));
+  t('the privacy line is shown', ftxt().includes('不含「亮的时刻」'), ftxt().slice(-90));
+  doc.getElementById('aiBtn').click(); await wait(90);
+  t('called the configured backend', !!sent && sent.url==='https://reflect.test/x', sent && sent.url);
+  t('sent the app token header', !!sent && sent.opts.headers['x-app-token']==='sekret');
+  t('the bright note is not in the request body', !!sent && !sent.opts.body.includes('不该出现的亮点'), sent && sent.opts.body.slice(0,160));
+  t('the reflection lands in a voice card', (()=>{ const o=doc.getElementById('aiOut'); return !!o && o.className.includes('ready') && o.textContent.includes('被听见'); })(), (doc.getElementById('aiOut')||{}).textContent);
+  w.closeFlow();
+
+  // --- failure degrades gently, never breaks the flow ---
+  wipe();
+  w.__kyp.D.ai = { url:'https://reflect.test/x', token:'' };
+  w.fetch = async () => ({ ok:false, status:500 });
+  await capture('又一次','autonomy','paused');
+  doc.getElementById('aiBtn').click(); await wait(90);
+  t('a failed reflection says so, softly', (doc.getElementById('aiOut')||{}).textContent.includes('没连上'), (doc.getElementById('aiOut')||{}).textContent);
+  t('the flow can still be finished', !!btns().find(x=>x.textContent.includes('完成')));
+  w.closeFlow();
+
+  // --- settings persists the backend url ---
+  wipe();
+  w.go('me');
+  doc.getElementById('aiUrl').value = 'https://saved.test/y';
+  doc.getElementById('aiToken').value = 't0ken';
+  [...doc.getElementById('view').querySelectorAll('button')].find(b=>b.textContent.trim()==='保存').click();
+  t('a saved backend url persists', w.__kyp.D.ai.url==='https://saved.test/y' && w.__kyp.D.ai.token==='t0ken', JSON.stringify(w.__kyp.D.ai));
+}
+
 console.log('\n7. a real pattern arrives, with calibration');
 wipe();
 [30, 23, 16, 9].forEach((d, i) => seed(d, 'autonomy', i < 2 ? 'react_now' : 'held_in', '记录' + i));

@@ -138,6 +138,11 @@ textarea{width:100%;font-family:var(--sans);font-size:16px;line-height:1.55;colo
   padding:14px 15px;resize:none;outline:none;transition:border-color .2s,background .2s}
 textarea:focus{border-color:var(--line2);background:var(--surface)}
 textarea::placeholder{color:var(--ink3)}
+.tin{width:100%;font-family:var(--sans);font-size:15px;color:var(--ink);background:var(--surface2);
+  border:1px solid transparent;border-radius:var(--r);padding:12px 14px;margin:0 0 10px;outline:none;
+  transition:border-color .2s,background .2s}
+.tin:focus{border-color:var(--line2);background:var(--surface)}
+.tin::placeholder{color:var(--ink3)}
 .seg{display:flex;gap:8px;background:var(--surface2);padding:4px;border-radius:999px}
 .seg button{flex:1;font-family:var(--sans);font-size:14.5px;font-weight:600;padding:11px;border:0;
   background:transparent;color:var(--ink2);border-radius:999px;cursor:pointer;transition:all .2s var(--ease)}
@@ -149,6 +154,18 @@ textarea::placeholder{color:var(--ink3)}
 .saidcard .who{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   color:var(--voice);margin-bottom:11px}
 .saidcard p{font-family:var(--serif);font-size:21px;line-height:1.4;letter-spacing:-.012em;margin:0;color:var(--ink)}
+
+/* opt-in AI reflection: sits under the mirror, only when a backend is set */
+.aiwrap{margin:2px 0 4px}
+.aisends{margin:8px 2px 0;font-size:12px;color:var(--ink3)}
+.aiout{margin:0}
+.aiout.thinking{font-size:14px;color:var(--ink3);padding:6px 2px;animation:pulse 1.4s ease-in-out infinite}
+.aiout.err{font-size:13.5px;color:var(--ink3);padding:6px 2px}
+.aiout.ready{background:var(--voice-soft);box-shadow:inset 0 0 0 1px rgba(123,224,214,.16);
+  border-radius:var(--r-lg);padding:20px 20px;margin-top:12px;animation:develop .62s var(--ease) both}
+.aiout.ready .who{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--voice);margin-bottom:10px}
+.aiout.ready p{font-family:var(--serif);font-size:18px;line-height:1.5;margin:0;color:var(--ink)}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
 
 .hl{background-image:linear-gradient(var(--hl),var(--hl));background-repeat:no-repeat;
   background-size:0% 42%;background-position:0 78%;transition:background-size .85s .25s var(--ease);
@@ -776,6 +793,17 @@ const C = {
   offListWord:'hard to name',
   weekBrightLab:'A bright moment you kept this week',
   weekBrightTitle:'A bright moment this week',
+  aiT:'AI reflection (optional)',
+  aiB:'Connect your own backend and, when you record something, it can read this moment and a few recent ones and answer with one real line — not a template. Data leaves your device only when you tap it, and your bright notes are never sent.',
+  aiUrlPh:'https://…workers.dev',
+  aiTokenPh:'Access token (optional)',
+  aiSave:'Save',
+  aiSaved:'Saved',
+  aiCta:'Ask for a real reflection',
+  aiThinking:'Reading what you wrote…',
+  aiErr:"Couldn't reach it — check the backend URL in settings.",
+  aiWho:'After reading',
+  aiSends:'Reads this moment and a few recent ones — never your bright notes.',
   letgoLines:['Saved.','Kept.',"It's here now.",'All here.','Okay, kept.','Got it down.'],
   letgoDone:'Set it down',
   seconds:n=>n+' seconds',
@@ -896,6 +924,17 @@ const C = {
   offListWord:'说不清的那一下',
   weekBrightLab:'这周你也留下过一个亮的时刻',
   weekBrightTitle:'这周，有一个亮的时刻',
+  aiT:'AI 反思（可选）',
+  aiB:'接上你自己的后端后，记录时它可以读这一条和最近几条，用一句真实的话回应你——而不是模板。数据只在你按下的那一刻离开设备，「亮的时刻」永远不发出去。',
+  aiUrlPh:'https://…workers.dev',
+  aiTokenPh:'访问口令（可选）',
+  aiSave:'保存',
+  aiSaved:'已保存',
+  aiCta:'让它说点真的',
+  aiThinking:'在读你写的……',
+  aiErr:'没连上——检查设置里的后端地址。',
+  aiWho:'读完之后',
+  aiSends:'会读这一条和最近几条，不含「亮的时刻」。',
   letgoLines:['记下了。','收下了。','在这里了。','都在了。','好，收下了。','嗯，记下了。'],
   letgoDone:'放下',
   seconds:n=>n+' 秒',
@@ -963,7 +1002,7 @@ const Store = (() => {
   let mem = null, ok = true;
   try { localStorage.setItem('kyp.t','1'); localStorage.removeItem('kyp.t'); }
   catch(e){ ok = false; }
-  const blank = () => ({moments:[], predictions:[], notes:[], lang:'zh', onboarded:false, created:Date.now()});
+  const blank = () => ({moments:[], predictions:[], notes:[], ai:{url:'',token:''}, lang:'zh', onboarded:false, created:Date.now()});
   return {
     persistent: ok,
     load(){
@@ -981,6 +1020,7 @@ const Store = (() => {
    UI
    ===================================================================== */
 let D = Store.load();
+D.ai = D.ai || {url:'',token:''};   // stored data from before AI existed has no ai field
 let L = D.lang || 'zh';
 let tab = 'home';
 let flow = null;          // active capture flow state
@@ -1359,6 +1399,12 @@ function viewMe(){
     <button class="btn" onclick="go('gaps')">${c().seeGaps}</button>
     <button class="btn" onclick="startOnboard()">${c().obAgain}</button>
     <div class="rule"></div>
+    <div class="eyebrow mb">${c().aiT}</div>
+    <p class="note">${c().aiB}</p>
+    <input id="aiUrl" class="tin" type="url" autocomplete="off" placeholder="${c().aiUrlPh}" value="${esc((D.ai||{}).url||'')}">
+    <input id="aiToken" class="tin" type="text" autocomplete="off" placeholder="${c().aiTokenPh}" value="${esc((D.ai||{}).token||'')}">
+    <button class="btn" onclick="saveAI(this)">${c().aiSave}</button>
+    <div class="rule"></div>
     <div class="eyebrow mb">${c().yourData}</div>
     <button class="btn" onclick="doExport()">${c().exportB}</button>
     <button class="btn" onclick="openImport()">${c().importB}</button>
@@ -1590,6 +1636,11 @@ function revealView(){
       </div>
       <div class="saidcard"><div class="who">${c().speaker}</div>
         <p>${m.signal==='other' ? c().mirrorPromiseOff : c().mirrorPromise(s.n)}</p></div>
+      ${aiOn() ? `<div class="aiwrap">
+        <button id="aiBtn" class="cta ghost" onclick="askReflection()">${c().aiCta}</button>
+        <div id="aiOut" class="aiout"></div>
+        <p class="note aisends">${c().aiSends}</p>
+      </div>` : ''}
       ${nextBtn(c().done)}`;
   }
 
@@ -1694,6 +1745,70 @@ function letgoView(){
     <div class="grow"></div>
     <button class="cta ghost" onclick="closeFlow()">${c().letgoDone}</button>
   </div>`;
+}
+
+/* =====================================================================
+   AI REFLECTION — opt-in, off by default. Nothing here runs, and no
+   button appears, until D.ai.url is set in settings. When it runs, only
+   the current moment + a small window of reaction-moments leave the
+   device. Light notes (D.notes) are never read here.
+   ===================================================================== */
+function aiOn(){ return !!(D.ai && D.ai.url); }
+
+// the exact payload that leaves the device — built from moments only, with
+// human-readable labels (not internal codes) so the model gets real words
+function buildReflect(cur){
+  const label = m => {
+    const S = sig(m.signal);
+    return {
+      text: (m.text||'').slice(0,300),
+      signal: m.signal==='other' ? ((m.other||{}).signal||'') : (S ? S.n : ''),
+      reaction: REACTIONS[m.reaction] ? REACTIONS[m.reaction][L] : '',
+      response: RESPONSES[m.response] ? RESPONSES[m.response][L] : ''
+    };
+  };
+  const recent = D.moments.filter(m => m.id !== cur.id).slice(-8).reverse().map(m => Object.assign(label(m), {
+    daysAgo: Math.max(0, Math.round((Date.now()-m.ts)/86400000))
+  }));
+  const pat = KYP.pattern(D.moments);
+  const pic = pat || KYP.glimpse(D.moments);
+  const ps = pic ? sig(pic.signal) : null;
+  return {
+    lang: L,
+    current: label(cur),
+    recent,
+    picture: pic ? { signal: ps ? ps.n : pic.signal, kind: pat ? 'pattern' : 'forming' } : null
+  };
+}
+
+async function askReflection(){
+  if(!aiOn() || !flow) return;
+  const out = $('aiOut'), btn = $('aiBtn');
+  if(btn){ btn.disabled = true; btn.classList.add('busy'); }
+  if(out){ out.className = 'aiout thinking'; out.textContent = c().aiThinking; }
+  try{
+    const ai = D.ai || {};
+    const res = await fetch(ai.url, {
+      method:'POST',
+      headers: Object.assign({'content-type':'application/json'}, ai.token ? {'x-app-token':ai.token} : {}),
+      body: JSON.stringify(buildReflect(flow.m))
+    });
+    if(!res.ok) throw new Error('http '+res.status);
+    const data = await res.json();
+    const text = ((data && data.reflection) || '').trim();
+    if(!text) throw new Error('empty');
+    if(out){ out.className = 'aiout ready'; out.innerHTML = `<div class="who">${c().aiWho}</div><p>${esc(text)}</p>`; }
+    if(btn) btn.classList.add('hidden');
+  }catch(e){
+    if(out){ out.className = 'aiout err'; out.textContent = c().aiErr; }
+    if(btn){ btn.disabled = false; btn.classList.remove('busy'); }
+  }
+}
+
+function saveAI(btn){
+  D.ai = { url: ($('aiUrl').value||'').trim(), token: ($('aiToken').value||'').trim() };
+  persist();
+  if(btn){ btn.textContent = c().aiSaved; setTimeout(()=>{ if(btn) btn.textContent = c().aiSave; }, 1600); }
 }
 
 function qNext(){ flow.qi++; if(flow.qi>=flow.queue.length) finishFlow(); else renderFlow(); }
@@ -1856,7 +1971,7 @@ render();
 if(!D.onboarded) startOnboard();
 if(typeof window!=='undefined'){
   Object.defineProperty(window,'__kyp',{value:{
-    get D(){return D}, set D(v){D=v}, get L(){return L}, get flow(){return flow}, KYP, Store
+    get D(){return D}, set D(v){D=v}, get L(){return L}, get flow(){return flow}, KYP, Store, buildReflect
   }});
 }
 </script>
