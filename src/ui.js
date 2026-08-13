@@ -2,6 +2,7 @@
    UI
    ===================================================================== */
 let D = Store.load();
+D.ai = D.ai || {url:'',token:''};   // stored data from before AI existed has no ai field
 let L = D.lang || 'zh';
 let tab = 'home';
 let flow = null;          // active capture flow state
@@ -380,6 +381,12 @@ function viewMe(){
     <button class="btn" onclick="go('gaps')">${c().seeGaps}</button>
     <button class="btn" onclick="startOnboard()">${c().obAgain}</button>
     <div class="rule"></div>
+    <div class="eyebrow mb">${c().aiT}</div>
+    <p class="note">${c().aiB}</p>
+    <input id="aiUrl" class="tin" type="url" autocomplete="off" placeholder="${c().aiUrlPh}" value="${esc((D.ai||{}).url||'')}">
+    <input id="aiToken" class="tin" type="text" autocomplete="off" placeholder="${c().aiTokenPh}" value="${esc((D.ai||{}).token||'')}">
+    <button class="btn" onclick="saveAI(this)">${c().aiSave}</button>
+    <div class="rule"></div>
     <div class="eyebrow mb">${c().yourData}</div>
     <button class="btn" onclick="doExport()">${c().exportB}</button>
     <button class="btn" onclick="openImport()">${c().importB}</button>
@@ -611,6 +618,11 @@ function revealView(){
       </div>
       <div class="saidcard"><div class="who">${c().speaker}</div>
         <p>${m.signal==='other' ? c().mirrorPromiseOff : c().mirrorPromise(s.n)}</p></div>
+      ${aiOn() ? `<div class="aiwrap">
+        <button id="aiBtn" class="cta ghost" onclick="askReflection()">${c().aiCta}</button>
+        <div id="aiOut" class="aiout"></div>
+        <p class="note aisends">${c().aiSends}</p>
+      </div>` : ''}
       ${nextBtn(c().done)}`;
   }
 
@@ -715,6 +727,70 @@ function letgoView(){
     <div class="grow"></div>
     <button class="cta ghost" onclick="closeFlow()">${c().letgoDone}</button>
   </div>`;
+}
+
+/* =====================================================================
+   AI REFLECTION — opt-in, off by default. Nothing here runs, and no
+   button appears, until D.ai.url is set in settings. When it runs, only
+   the current moment + a small window of reaction-moments leave the
+   device. Light notes (D.notes) are never read here.
+   ===================================================================== */
+function aiOn(){ return !!(D.ai && D.ai.url); }
+
+// the exact payload that leaves the device — built from moments only, with
+// human-readable labels (not internal codes) so the model gets real words
+function buildReflect(cur){
+  const label = m => {
+    const S = sig(m.signal);
+    return {
+      text: (m.text||'').slice(0,300),
+      signal: m.signal==='other' ? ((m.other||{}).signal||'') : (S ? S.n : ''),
+      reaction: REACTIONS[m.reaction] ? REACTIONS[m.reaction][L] : '',
+      response: RESPONSES[m.response] ? RESPONSES[m.response][L] : ''
+    };
+  };
+  const recent = D.moments.filter(m => m.id !== cur.id).slice(-8).reverse().map(m => Object.assign(label(m), {
+    daysAgo: Math.max(0, Math.round((Date.now()-m.ts)/86400000))
+  }));
+  const pat = KYP.pattern(D.moments);
+  const pic = pat || KYP.glimpse(D.moments);
+  const ps = pic ? sig(pic.signal) : null;
+  return {
+    lang: L,
+    current: label(cur),
+    recent,
+    picture: pic ? { signal: ps ? ps.n : pic.signal, kind: pat ? 'pattern' : 'forming' } : null
+  };
+}
+
+async function askReflection(){
+  if(!aiOn() || !flow) return;
+  const out = $('aiOut'), btn = $('aiBtn');
+  if(btn){ btn.disabled = true; btn.classList.add('busy'); }
+  if(out){ out.className = 'aiout thinking'; out.textContent = c().aiThinking; }
+  try{
+    const ai = D.ai || {};
+    const res = await fetch(ai.url, {
+      method:'POST',
+      headers: Object.assign({'content-type':'application/json'}, ai.token ? {'x-app-token':ai.token} : {}),
+      body: JSON.stringify(buildReflect(flow.m))
+    });
+    if(!res.ok) throw new Error('http '+res.status);
+    const data = await res.json();
+    const text = ((data && data.reflection) || '').trim();
+    if(!text) throw new Error('empty');
+    if(out){ out.className = 'aiout ready'; out.innerHTML = `<div class="who">${c().aiWho}</div><p>${esc(text)}</p>`; }
+    if(btn) btn.classList.add('hidden');
+  }catch(e){
+    if(out){ out.className = 'aiout err'; out.textContent = c().aiErr; }
+    if(btn){ btn.disabled = false; btn.classList.remove('busy'); }
+  }
+}
+
+function saveAI(btn){
+  D.ai = { url: ($('aiUrl').value||'').trim(), token: ($('aiToken').value||'').trim() };
+  persist();
+  if(btn){ btn.textContent = c().aiSaved; setTimeout(()=>{ if(btn) btn.textContent = c().aiSave; }, 1600); }
 }
 
 function qNext(){ flow.qi++; if(flow.qi>=flow.queue.length) finishFlow(); else renderFlow(); }
@@ -877,6 +953,6 @@ render();
 if(!D.onboarded) startOnboard();
 if(typeof window!=='undefined'){
   Object.defineProperty(window,'__kyp',{value:{
-    get D(){return D}, set D(v){D=v}, get L(){return L}, get flow(){return flow}, KYP, Store
+    get D(){return D}, set D(v){D=v}, get L(){return L}, get flow(){return flow}, KYP, Store, buildReflect
   }});
 }
