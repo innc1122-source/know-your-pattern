@@ -225,6 +225,16 @@ textarea::placeholder{color:var(--ink3)}
 .exrow{display:flex;align-items:flex-start;justify-content:center;gap:20px;opacity:.55;margin-top:6px}
 .exnum{font-family:var(--serif);font-size:30px;line-height:1.1;margin:3px 0}
 .exlab{font-size:12px;font-weight:600;color:var(--ink3)}
+/* the forming middle — a living picture before a comparison is earned */
+.formcard{display:block;width:100%;text-align:left;font-family:inherit;cursor:pointer;
+  background:var(--surface2);border:0;box-shadow:inset 0 0 0 1px var(--line);border-radius:var(--r-lg);
+  padding:18px 18px;margin:20px 0 4px;animation:rise .5s var(--ease) both}
+.formcard .eyebrow{margin-bottom:8px}
+.formmix{font-family:var(--serif);font-size:17px;line-height:1.45;color:var(--ink);margin:0 0 13px}
+.formbar{height:5px;border-radius:999px;background:var(--line);overflow:hidden;margin:0 0 10px}
+.formbar i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .6s var(--ease)}
+.formwatch{font-size:12.5px;line-height:1.5;color:var(--ink3);margin:0}
+
 /* weekly snapshot — the day 7 payoff */
 .weekcard{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line);border-radius:var(--r-lg);padding:22px 20px;margin-bottom:26px;
   animation:rise .5s var(--ease) both}
@@ -756,6 +766,9 @@ const C = {
   unlockCount:n=>`${n} more on this signal`,unlockDays:n=>`about ${n} more days`,
   unlockBoth:(n,d)=>`${n} more on this signal, and about ${d} more days`,
   unlockLead:'To compare, we still need',
+  formingNow:'Taking shape',
+  formingMix:(name,resp,pct)=>`So far on "${name}", mostly: ${resp} — ${pct}%.`,
+  formingWatch:"Give it a little more and you'll see whether it's shifting.",
   unlockFresh:n=>`Start with a few moments. A comparison needs ${n} on the same signal, a few weeks apart.`,
   intensityH:'How strong was it?',
   moreOptions:'Other possibilities',fewerOptions:'Show fewer',
@@ -790,6 +803,7 @@ const C = {
   next:'Next',save:'Save',done:'Done',skip:'Skip',cancel:'Cancel',back:'Back',
   mirrorH:"Here's what you noticed.",mirrorB:"That's enough for now.",
   mirrorPromise:s=>`We'll hold on to "${s}". If it shows up again, we'll tell you.`,
+  mirrorAgain:s=>`"${s}" — here again.`,
   mirrorPromiseOff:"This one isn't on my list — but I've kept it, and it's helping me see what the list is missing.",
   offListWord:'hard to name',
   weekBrightLab:'A bright moment you kept this week',
@@ -890,6 +904,9 @@ const C = {
   unlockCount:n=>`这个信号再 ${n} 次`,unlockDays:n=>`大约再 ${n} 天`,
   unlockBoth:(n,d)=>`这个信号再 ${n} 次，以及大约再 ${d} 天`,
   unlockLead:'要做对比，还差',
+  formingNow:'正在成形',
+  formingMix:(name,resp,pct)=>`目前「${name}」上，你多半「${resp}」——${pct}%。`,
+  formingWatch:'等它再攒一些，就能看出你是不是在变。',
   unlockFresh:n=>`先记几个瞬间。做一次对比，需要同一个信号累积 ${n} 次，并且跨过几周。`,
   intensityH:'这次有多强？',
   moreOptions:'其他可能',fewerOptions:'收起来',
@@ -924,6 +941,7 @@ const C = {
   next:'下一步',save:'保存',done:'完成',skip:'跳过',cancel:'取消',back:'返回',
   mirrorH:'这是你刚刚注意到的。',mirrorB:'今天看到这里就够了。',
   mirrorPromise:s=>`「${s}」我们记下了。如果它再出现，我们会告诉你。`,
+  mirrorAgain:s=>`又是「${s}」。`,
   mirrorPromiseOff:'这个不在我的词表里——但我记下了。它在帮我看清词表还缺什么。',
   offListWord:'说不清的那一下',
   weekBrightLab:'这周你也留下过一个亮的时刻',
@@ -1078,6 +1096,7 @@ function viewHome(){
     <button class="cta" onclick="startFlow()">${c().catchOne}</button>
     <button class="cta ghost notecta" onclick="startNote()">${c().noteCta}</button>
     ${predHook()}
+    ${formingCard()}
 
     <div class="rule"></div>
     <div class="eyebrow mb">${c().showingUp}</div>
@@ -1136,6 +1155,26 @@ function predHook(){
   return `<button class="guesshook" onclick="go('guesses')">
     <div class="ghmain"><div class="ghlead">${lead}</div><div class="ghsub">${sub}</div></div>
     <div class="gharrow">&rarr;</div>
+  </button>`;
+}
+
+/* the middle stretch made visible: before a comparison is earned, show the
+   picture as it stands and let it move — the reward is watching it form, not
+   a countdown. snapshotNow claims only the current mix, never a trend. */
+function formingCard(){
+  const up = KYP.unlockProgress(D.moments);
+  if(!up.signal) return '';
+  if(KYP.change(D.moments, up.signal)) return '';        // already unlocked — the Changes tab holds the real thing
+  const snap = KYP.snapshotNow(D.moments, up.signal);
+  if(!snap) return '';                                   // needs 3 responses on this signal
+  const s = sig(snap.signal), top = snap.mix[0];
+  const resp = RESPONSES[top.response] ? RESPONSES[top.response][L] : '';
+  const filled = Math.round(Math.min(1, snap.n / KYP.TH.changeMin) * 100);
+  return `<button class="formcard" onclick="go('changes')">
+    <div class="eyebrow">${c().formingNow}</div>
+    <p class="formmix">${c().formingMix(s.n, resp, top.pct)}</p>
+    <div class="formbar"><i style="width:${filled}%"></i></div>
+    <p class="formwatch">${c().formingWatch}</p>
   </button>`;
 }
 
@@ -1635,6 +1674,10 @@ function revealView(){
   const nextBtn = t => `<div class="grow"></div><button class="cta" onclick="${last?'finishFlow()':'qNext()'}">${t}</button>`;
 
   if(k==='mirror'){
+    // don't re-promise "if it shows up again, we'll tell you" on a signal that already has —
+    // once it's a repeat, a quiet acknowledgement, and the connection/glimpse card carries the detail
+    const priorSame = m.signal!=='other' && D.moments.filter(x=>x.id!==m.id && x.signal===m.signal).length > 0;
+    const mline = m.signal==='other' ? c().mirrorPromiseOff : (priorSame ? c().mirrorAgain(s.n) : c().mirrorPromise(s.n));
     return `<div class="eyebrow">${c().seconds(m.secs)}</div>
       <h1 class="lede sm">${c().mirrorH}</h1>
       <p class="body">${c().mirrorB}</p>
@@ -1645,7 +1688,7 @@ function revealView(){
         <div class="quote">「${m.intensity?INTENSITY[m.intensity][L]:''}」</div>
       </div>
       <div class="saidcard"><div class="who">${c().speaker}</div>
-        <p>${m.signal==='other' ? c().mirrorPromiseOff : c().mirrorPromise(s.n)}</p></div>
+        <p>${mline}</p></div>
       ${aiOn() ? `<div class="aiwrap">
         <button id="aiBtn" class="cta ghost" onclick="askReflection()">${c().aiCta}</button>
         <div id="aiOut" class="aiout"></div>
