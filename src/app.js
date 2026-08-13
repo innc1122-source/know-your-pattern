@@ -207,8 +207,11 @@ const C = {
   weekBrightLab:'A bright moment you kept this week',
   weekBrightTitle:'A bright moment this week',
   aiT:'AI reflection (optional)',
-  aiB:'Connect your own backend and, when you record something, it can read this moment and a few recent ones and answer with one real line — not a template. Data leaves your device only when you tap it, and your bright notes are never sent.',
+  aiB:'After you record, it can read this moment and a few recent ones and answer with one real line — not a template. Pick one: paste a key (simplest), or a backend URL. Data leaves your device only when you tap, and your bright notes are never sent.',
+  aiKeyPh:'Anthropic key (sk-ant-…)',
+  aiKeyNote:'Simplest: paste your own key. It stays in this browser and calls the model directly — nothing to deploy.',
   aiUrlPh:'https://…workers.dev',
+  aiUrlNote:'Or, for later: your own backend URL (keeps the key off the browser — better once others use it).',
   aiTokenPh:'Access token (optional)',
   aiSave:'Save',
   aiSaved:'Saved',
@@ -338,8 +341,11 @@ const C = {
   weekBrightLab:'这周你也留下过一个亮的时刻',
   weekBrightTitle:'这周，有一个亮的时刻',
   aiT:'AI 反思（可选）',
-  aiB:'接上你自己的后端后，记录时它可以读这一条和最近几条，用一句真实的话回应你——而不是模板。数据只在你按下的那一刻离开设备，「亮的时刻」永远不发出去。',
+  aiB:'记录完，可以让它读这一条和最近几条，用一句真实的话回应你——而不是模板。二选一：直接填密钥（最简单），或填你自建后端的地址。数据只在你按下那一刻离开设备，「亮的时刻」永远不发。',
+  aiKeyPh:'Anthropic 密钥（sk-ant-…）',
+  aiKeyNote:'最简单：直接粘你自己的密钥。它只存在这个浏览器里，直连模型——不用搭后端。',
   aiUrlPh:'https://…workers.dev',
+  aiUrlNote:'或者，留着以后用：你自建后端的地址（密钥不进浏览器，给别人用时更稳）。',
   aiTokenPh:'访问口令（可选）',
   aiSave:'保存',
   aiSaved:'已保存',
@@ -415,7 +421,7 @@ const Store = (() => {
   let mem = null, ok = true;
   try { localStorage.setItem('kyp.t','1'); localStorage.removeItem('kyp.t'); }
   catch(e){ ok = false; }
-  const blank = () => ({moments:[], predictions:[], notes:[], ai:{url:'',token:''}, lang:'zh', onboarded:false, created:Date.now()});
+  const blank = () => ({moments:[], predictions:[], notes:[], ai:{url:'',token:'',key:''}, lang:'zh', onboarded:false, created:Date.now()});
   return {
     persistent: ok,
     load(){

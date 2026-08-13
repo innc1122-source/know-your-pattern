@@ -308,6 +308,33 @@ console.log('\n6h. AI reflection is opt-in, private, and degrades to nothing');
   t('a saved backend url persists', w.__kyp.D.ai.url==='https://saved.test/y' && w.__kyp.D.ai.token==='t0ken', JSON.stringify(w.__kyp.D.ai));
 }
 
+console.log('\n6i. direct-key mode calls the model straight from the browser');
+{
+  wipe();
+  w.__kyp.D.ai = { key:'sk-ant-test', url:'', token:'' };
+  w.__kyp.D.notes.push({id:'bq', ts:Date.now(), text:'不该出现的私密亮点', bright:true});
+  let sent = null;
+  w.fetch = async (url, opts) => { sent = { url, opts }; return { ok:true, json: async()=>({ content:[{type:'text', text:'看起来这次你停了一下。'}] }) }; };
+  await capture('又被打断了','autonomy','paused');
+  t('reflect button appears in direct mode', !!doc.getElementById('aiBtn'));
+  doc.getElementById('aiBtn').click(); await wait(90);
+  t('calls Anthropic directly', !!sent && sent.url.includes('api.anthropic.com'), sent && sent.url);
+  t('sends the key as x-api-key', !!sent && sent.opts.headers['x-api-key']==='sk-ant-test');
+  t('opts into browser access explicitly', !!sent && sent.opts.headers['anthropic-dangerous-direct-browser-access']==='true');
+  const body = sent ? JSON.parse(sent.opts.body) : {};
+  t('builds a real prompt, not the raw payload', !!body.system && Array.isArray(body.messages) && body.messages[0].content.includes('被打断'), sent && sent.opts.body.slice(0,120));
+  t('the bright note still never leaves', !!sent && !sent.opts.body.includes('私密亮点'));
+  t('the reflection lands in a voice card', (()=>{ const o=doc.getElementById('aiOut'); return !!o && o.className.includes('ready') && o.textContent.includes('停了一下'); })(), (doc.getElementById('aiOut')||{}).textContent);
+  w.closeFlow();
+
+  // a saved key persists and takes the direct path
+  wipe();
+  w.go('me');
+  doc.getElementById('aiKey').value = 'sk-ant-saved';
+  [...doc.getElementById('view').querySelectorAll('button')].find(b=>b.textContent.trim()==='保存').click();
+  t('a saved key persists', w.__kyp.D.ai.key==='sk-ant-saved', JSON.stringify(w.__kyp.D.ai));
+}
+
 console.log('\n7. a real pattern arrives, with calibration');
 wipe();
 [30, 23, 16, 9].forEach((d, i) => seed(d, 'autonomy', i < 2 ? 'react_now' : 'held_in', '记录' + i));
