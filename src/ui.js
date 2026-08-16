@@ -50,8 +50,8 @@ function viewHome(){
     ${showWeek ? weekCard(wk) : (showBright ? brightCard(bright) : '')}
     <div class="eyebrow">${ms.length ? c().momentsCount(ms.length) : ''}</div>
     <h1 class="lede">${c().somethingHappened}</h1>
-    <button class="cta" onclick="startFlow()">${c().catchOne}</button>
-    <button class="cta ghost notecta" onclick="startNote()">${c().noteCta}</button>
+    <button class="cta door" onclick="startFlow()"><span>${c().catchOne}</span><span class="doorsub">${c().catchOneSub}</span></button>
+    <button class="cta ghost door notecta" onclick="startNote()"><span>${c().noteCta}</span><span class="doorsub">${c().noteCtaSub}</span></button>
     ${predHook()}
     ${formingCard()}
 
@@ -458,7 +458,12 @@ function startNote(){
 }
 function closeNote(){ note=null; $('overlay').classList.remove('on'); render(); }
 function setNoteText(v){ if(note){ note.text=v; const b=$('nSave'); if(b) b.disabled = v.trim().length<1; } }
-function toggleBright(){ if(note){ note.bright=!note.bright; renderNote(); } }
+function toggleBright(){   // flip in place — re-rendering the whole screen replayed the animation and wiped the textarea
+  if(!note) return;
+  note.bright = !note.bright;
+  const b = $('nBright');
+  if(b){ b.classList.toggle('sel', note.bright); b.setAttribute('aria-pressed', note.bright); }
+}
 function saveLightNote(){
   if(!note) return;
   const v = (note.text||'').trim(); if(v.length<1) return;
@@ -491,7 +496,7 @@ function renderNote(){
     <h1 class="lede sm">${c().noteH}</h1>
     <p class="body">${c().noteB}</p>
     <textarea id="nText" rows="4" placeholder="${c().notePh}" oninput="setNoteText(this.value)">${esc(note.text)}</textarea>
-    <button class="pill ${note.bright?'sel':''}" style="align-self:flex-start;margin:12px 0 0" onclick="toggleBright()">${c().noteBright}</button>
+    <button class="pill toggle ${note.bright?'sel':''}" id="nBright" aria-pressed="${!!note.bright}" style="align-self:flex-start;margin:12px 0 0" onclick="toggleBright()">${c().noteBright}</button>
     <div class="grow"></div>
     <button class="cta" id="nSave" ${note.text.trim().length<1?'disabled':''} onclick="saveLightNote()">${c().save}</button>
     <button class="cta ghost" onclick="closeNote()">${c().cancel}</button>`;
