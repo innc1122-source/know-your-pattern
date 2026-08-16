@@ -788,6 +788,9 @@ const C = {
   ob2B:"You don't need to write every day. Come back when something happens. Most moments take under a minute.",
   ob3E:"What we won't do",ob3H:'You decide what feels true.',
   ob3B:'We look for things that repeat, and we always show you the evidence. We do not diagnose you, and we never tell you who you are.',
+  obPathsE:'Two ways in',obPathsH:'Two kinds of moment, handled differently.',
+  obPathsA:'“The ones that snag you” — not heard, no say, unfair. These go into the engine, to show you your reaction patterns.',
+  obPathsB:'“The ones that move you” — a film, a line, a good you can’t name. These are only kept and revisited — never analyzed.',
   obStart:'Start',obNext:'Continue',obAgain:'Read the intro again',
   home:'Home',patterns:'Patterns',changes:'Changes',me:'Me',
   somethingHappened:'Something happened?',catchOne:'Catch a moment',
@@ -926,6 +929,9 @@ const C = {
   ob2B:'你不用每天写。有事情发生、让你在意的时候，再回来。大部分记录不到一分钟。',
   ob3E:'我们不会做的事',ob3H:'像不像你，由你判断。',
   ob3B:'我们会找那些重复出现的东西，并且永远把依据摆给你看。但我们不诊断你，也不会告诉你「你是谁」。',
+  obPathsE:'两条路',obPathsH:'两种瞬间，去处不同。',
+  obPathsA:'「被绊到的」——没被听见、没得选、不公平那种。这些进引擎，帮你看出你反应的模式。',
+  obPathsB:'「被打动的」——一部电影、一句话、说不清的好。这些只被留住、被回看，永远不分析。',
   obStart:'开始',obNext:'继续',obAgain:'重看一次开场',
   home:'首页',patterns:'模式',changes:'变化',me:'我',
   somethingHappened:'发生了点什么？',catchOne:'记录一个瞬间',
@@ -2042,8 +2048,10 @@ function renderOb(){
       <div class="grow"></div><div class="obdots">${[0,1,2].map(i=>`<i class="${i===1?'on':''}"></i>`).join('')}</div>
       <button class="cta" onclick="obNext()">${c().obNext}</button>`;
   } else {
-    box.innerHTML = `<div class="eyebrow">${c().aboutT}</div><div class="grow"></div>
-      <h1 class="lede sm">${c().somethingHappened}</h1><p class="body">${c().aboutB}</p>
+    box.innerHTML = `<div class="eyebrow">${c().obPathsE}</div><div class="grow"></div>
+      <h1 class="lede sm">${c().obPathsH}</h1>
+      <p class="body">${c().obPathsA}</p>
+      <p class="body" style="margin-top:14px">${c().obPathsB}</p>
       <div class="grow"></div><div class="obdots">${[0,1,2].map(i=>`<i class="${i===2?'on':''}"></i>`).join('')}</div>
       <button class="cta" onclick="finishOb()">${c().catchOne}</button>`;
   }

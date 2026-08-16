@@ -72,6 +72,8 @@ obtn('继续');
 t('screen 3: you decide what is true', otxt().includes('由你判断'), otxt().slice(0,80));
 t('no-diagnosis promise present', otxt().includes('不诊断你'));
 obtn('继续');
+t('final screen names both paths', otxt().includes('被绊到的') && otxt().includes('被打动的'), otxt().slice(0,140));
+t('final screen sets the expectation: one is analyzed, one is not', otxt().includes('永远不分析'), otxt().slice(0,180));
 obtn('记录一个瞬间');
 t('onboarding dismissed', !doc.getElementById('onboard').classList.contains('on'));
 t('onboarded flag persisted', w.__kyp.D.onboarded === true);
