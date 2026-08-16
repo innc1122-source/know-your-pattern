@@ -97,6 +97,9 @@ h1{margin:0;font-weight:600;letter-spacing:-.022em}
 .pill.stack{display:block;width:100%;text-align:left;margin:0 0 8px;padding:14px 20px}
 .pill:active{transform:scale(.985)}
 .pill.sel{background:var(--accent);color:var(--on-accent);box-shadow:var(--glow);font-weight:600;transform:translateY(-1px)}
+/* a standalone toggle chip must not resize or hop when tapped: hold weight + position steady, colour alone carries the on-state */
+.pill.toggle{animation:none}
+.pill.toggle.sel{font-weight:500;transform:none}
 .more{display:block;width:100%;text-align:center;background:transparent;border:0;cursor:pointer;
   font-family:var(--sans);font-size:14px;font-weight:600;color:var(--ink3);padding:12px;margin-bottom:6px;
   transition:color .18s}
@@ -132,6 +135,9 @@ h1{margin:0;font-weight:600;letter-spacing:-.022em}
 .cta{box-shadow:var(--glow)}
 .cta:disabled{opacity:.3;box-shadow:none}
 .cta.ghost{background:transparent;color:var(--ink2);box-shadow:none;font-weight:500}
+/* the two home doors: a small second line tells them apart — one gets analysed, one is only kept */
+.door{display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.2}
+.doorsub{font-size:12px;font-weight:500;letter-spacing:.01em;opacity:.66}
 
 textarea{width:100%;font-family:var(--sans);font-size:16px;line-height:1.55;color:var(--ink);
   background:var(--surface2);border:1px solid transparent;border-radius:var(--r);
@@ -794,6 +800,7 @@ const C = {
   obStart:'Start',obNext:'Continue',obAgain:'Read the intro again',
   home:'Home',patterns:'Patterns',changes:'Changes',me:'Me',
   somethingHappened:'Something happened?',catchOne:'Catch a moment',
+  catchOneSub:'the ones that snag you',
   nothingYet:'Nothing here yet. Come back when something happens.',
   showingUp:"What's showing up",recent:'Recent moments',noSignals:'Every moment adds a piece.',
   momentsCount:n=>n===1?'1 moment':n+' moments',
@@ -875,7 +882,8 @@ const C = {
   aboutT:'What this is',
   aboutB:'A place to notice what repeats. It does not diagnose you and it is not therapy. Everything stays on this device.',
   del:'Delete this moment',
-  noteCta:'Or just keep something',
+  noteCta:'Keep something',
+  noteCtaSub:'the ones that move you',
   noteH:'Something to keep?',
   noteB:'Good, small, hard to name — anything. Just a line.',
   notePh:'Just a line…',
@@ -935,6 +943,7 @@ const C = {
   obStart:'开始',obNext:'继续',obAgain:'重看一次开场',
   home:'首页',patterns:'模式',changes:'变化',me:'我',
   somethingHappened:'发生了点什么？',catchOne:'记录一个瞬间',
+  catchOneSub:'被绊到的瞬间',
   nothingYet:'这里还是空的。有事情发生的时候再回来。',
   showingUp:'正在出现的信号',recent:'最近的记录',noSignals:'每一个瞬间，都会多一块拼图。',
   momentsCount:n=>'已记录 '+n+' 个瞬间',
@@ -1016,7 +1025,8 @@ const C = {
   aboutT:'这是什么',
   aboutB:'一个用来看见重复的地方。它不诊断你，也不是心理治疗。所有数据都留在这台设备上。',
   del:'删除这条记录',
-  noteCta:'或者，留住点什么',
+  noteCta:'留住点什么',
+  noteCtaSub:'被打动的瞬间',
   noteH:'想留住点什么？',
   noteB:'好的、小的、说不清的，都行。就一句话。',
   notePh:'就一句话……',
@@ -1099,8 +1109,8 @@ function viewHome(){
     ${showWeek ? weekCard(wk) : (showBright ? brightCard(bright) : '')}
     <div class="eyebrow">${ms.length ? c().momentsCount(ms.length) : ''}</div>
     <h1 class="lede">${c().somethingHappened}</h1>
-    <button class="cta" onclick="startFlow()">${c().catchOne}</button>
-    <button class="cta ghost notecta" onclick="startNote()">${c().noteCta}</button>
+    <button class="cta door" onclick="startFlow()"><span>${c().catchOne}</span><span class="doorsub">${c().catchOneSub}</span></button>
+    <button class="cta ghost door notecta" onclick="startNote()"><span>${c().noteCta}</span><span class="doorsub">${c().noteCtaSub}</span></button>
     ${predHook()}
     ${formingCard()}
 
@@ -1507,7 +1517,12 @@ function startNote(){
 }
 function closeNote(){ note=null; $('overlay').classList.remove('on'); render(); }
 function setNoteText(v){ if(note){ note.text=v; const b=$('nSave'); if(b) b.disabled = v.trim().length<1; } }
-function toggleBright(){ if(note){ note.bright=!note.bright; renderNote(); } }
+function toggleBright(){   // flip in place — re-rendering the whole screen replayed the animation and wiped the textarea
+  if(!note) return;
+  note.bright = !note.bright;
+  const b = $('nBright');
+  if(b){ b.classList.toggle('sel', note.bright); b.setAttribute('aria-pressed', note.bright); }
+}
 function saveLightNote(){
   if(!note) return;
   const v = (note.text||'').trim(); if(v.length<1) return;
@@ -1540,7 +1555,7 @@ function renderNote(){
     <h1 class="lede sm">${c().noteH}</h1>
     <p class="body">${c().noteB}</p>
     <textarea id="nText" rows="4" placeholder="${c().notePh}" oninput="setNoteText(this.value)">${esc(note.text)}</textarea>
-    <button class="pill ${note.bright?'sel':''}" style="align-self:flex-start;margin:12px 0 0" onclick="toggleBright()">${c().noteBright}</button>
+    <button class="pill toggle ${note.bright?'sel':''}" id="nBright" aria-pressed="${!!note.bright}" style="align-self:flex-start;margin:12px 0 0" onclick="toggleBright()">${c().noteBright}</button>
     <div class="grow"></div>
     <button class="cta" id="nSave" ${note.text.trim().length<1?'disabled':''} onclick="saveLightNote()">${c().save}</button>
     <button class="cta ghost" onclick="closeNote()">${c().cancel}</button>`;

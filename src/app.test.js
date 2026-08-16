@@ -378,6 +378,22 @@ console.log('\n6k. the mirror stops re-promising once a signal repeats');
   w.closeFlow();
 }
 
+console.log('\n6l. distinct home doors + a stable in-place bright toggle');
+{
+  wipe();
+  w.go('home');
+  t('the two doors name their paths', txt().includes('被绊到的') && txt().includes('被打动的'), txt().slice(0,200));
+  w.startNote();
+  t('bright toggle starts off', !doc.getElementById('nBright').classList.contains('sel'));
+  doc.getElementById('nText').value = '半句还没写完';
+  w.toggleBright();
+  t('bright toggle flips on', doc.getElementById('nBright').classList.contains('sel'));
+  t('toggling did not wipe the textarea', doc.getElementById('nText').value === '半句还没写完');
+  w.toggleBright();
+  t('and flips back off', !doc.getElementById('nBright').classList.contains('sel'));
+  w.closeNote();
+}
+
 console.log('\n7. a real pattern arrives, with calibration');
 wipe();
 [30, 23, 16, 9].forEach((d, i) => seed(d, 'autonomy', i < 2 ? 'react_now' : 'held_in', '记录' + i));
