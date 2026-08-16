@@ -999,8 +999,10 @@ function renderOb(){
       <div class="grow"></div><div class="obdots">${[0,1,2].map(i=>`<i class="${i===1?'on':''}"></i>`).join('')}</div>
       <button class="cta" onclick="obNext()">${c().obNext}</button>`;
   } else {
-    box.innerHTML = `<div class="eyebrow">${c().aboutT}</div><div class="grow"></div>
-      <h1 class="lede sm">${c().somethingHappened}</h1><p class="body">${c().aboutB}</p>
+    box.innerHTML = `<div class="eyebrow">${c().obPathsE}</div><div class="grow"></div>
+      <h1 class="lede sm">${c().obPathsH}</h1>
+      <p class="body">${c().obPathsA}</p>
+      <p class="body" style="margin-top:14px">${c().obPathsB}</p>
       <div class="grow"></div><div class="obdots">${[0,1,2].map(i=>`<i class="${i===2?'on':''}"></i>`).join('')}</div>
       <button class="cta" onclick="finishOb()">${c().catchOne}</button>`;
   }
