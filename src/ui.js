@@ -405,9 +405,8 @@ function viewMe(){
     <div class="eyebrow mb">${c().yourData}</div>
     <button class="btn" onclick="doExport()">${c().exportB}</button>
     <button class="btn" onclick="openImport()">${c().importB}</button>
-    <button class="btn" onclick="loadDemo()">${c().demoLoad}</button>
     <button class="btn danger" onclick="doClear()">${c().clearB}</button>
-    <p class="note">${D.moments.length} · ${Store.persistent?'localStorage':'memory only'}</p>
+    <p class="note">${c().dataWhere(D.moments.length)}</p>
   </div>`;
 }
 
@@ -888,6 +887,8 @@ function doImport(file){
 }
 function doClear(){ if(confirm(c().clearConfirm)){ D = Store.reset(); L=D.lang; render(); } }
 
+/* Test/dev fixture only — reachable through __kyp, never from the UI. It wipes
+   whatever is stored, which is not something to leave a button for. */
 function loadDemo(){
   if(D.moments.length && !confirm(c().demoWarn)) return;
   D = Store.reset(); D.lang = L;
@@ -1012,7 +1013,7 @@ render();
 if(!D.onboarded) startOnboard();
 if(typeof window!=='undefined'){
   Object.defineProperty(window,'__kyp',{value:{
-    get D(){return D}, set D(v){D=v}, get L(){return L}, get flow(){return flow}, KYP, Store, buildReflect,
+    get D(){return D}, set D(v){D=v}, get L(){return L}, get flow(){return flow}, KYP, Store, buildReflect, loadDemo,
     get aiEndpoint(){return AI_ENDPOINT}, set aiEndpoint(v){AI_ENDPOINT=v}, aiLeft
   }});
 }

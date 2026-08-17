@@ -520,12 +520,14 @@ t('still excluded from the engine', w.__kyp.KYP.ranked(w.__kyp.D.moments).every(
   t('report reaches the export payload', rep.list.length === 1 && rep.list[0].text === '插不上话', JSON.stringify(rep.list));
 }
 w.go('me');
-t('reachable from Me', txt().includes('看看词表漏了什么'), txt().slice(-220));
+t('reachable from Me', txt().includes('看看选项没接住的事'), txt().slice(-220));
+t('no sample-data button on the shipped Me page', !txt().includes('示范数据'), txt().slice(-220));
+t('and no raw storage debug line', !/\d+ · localStorage/.test(txt()) && txt().includes('只存在这台设备的浏览器里'), txt().slice(-160));
 t('mark shown on Me', !!doc.querySelector('#view .logomark'));
 
 console.log('\n8. demo data lights up Patterns and Changes');
 const b8 = errors.length;
-w.loadDemo();
+w.__kyp.loadDemo();
 t('demo loads clean', errors.length === b8, errors.slice(b8).join(';'));
 t('demo volume', w.__kyp.D.moments.length >= 12, String(w.__kyp.D.moments.length));
 w.go('patterns');
@@ -541,7 +543,7 @@ t('demo also shows softening', txt().includes('没那么疼了'), txt().slice(0,
 t('no NaN/undefined leaked', !/NaN|undefined/.test(doc.getElementById('view').innerHTML));
 
 console.log('\n8b. the Chinese build has no English leaking through');
-w.setLang('zh'); w.loadDemo();
+w.setLang('zh'); w.__kyp.loadDemo();
 {
   const strip = h => h.replace(/<[^>]*>/g,' ');
   // the brand name and the language switcher stay untranslated by design
