@@ -10,3 +10,11 @@ compatibility_date = "2024-11-01"
 ALLOWED_ORIGIN = "https://innc1122-source.github.io"
 # Any Gemini model id. gemini-2.0-flash is free-tier eligible and fast.
 MODEL = "gemini-2.0-flash"
+
+# Server-side daily cap (recommended before real traffic). Without this the
+# Worker still runs — it just relies on the app's client-side count.
+#   1. wrangler kv namespace create RL
+#   2. paste the printed id below and uncomment these three lines, then redeploy.
+# [[kv_namespaces]]
+# binding = "RL"
+# id = "<your-kv-namespace-id>"

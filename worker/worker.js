@@ -26,6 +26,11 @@ const DEFAULT_MODEL = 'gemini-2.0-flash';
 const MAX_TOKENS = 320;
 const MAX_TEXT = 320;     // per-field character cap we accept from the client
 const MAX_RECENT = 12;    // most recent moments we'll consider
+const DAILY_CAP = 5;      // reflections per person per day (kept in step with the app's AI_DAILY_CAP)
+const RL_TTL = 172800;    // rate-limit counters expire after 2 days
+
+// per-person key for the daily counter: Cloudflare gives us the real client IP
+const rlKey = (request, day) => 'rl:' + (request.headers.get('CF-Connecting-IP') || 'anon') + ':' + day;
 
 function corsHeaders(request, env) {
   const allow = (env.ALLOWED_ORIGIN || '*').split(',').map(s => s.trim()).filter(Boolean);
@@ -134,6 +139,18 @@ export default {
     if (!body.current.text)
       return json({ error: 'nothing to reflect on' }, 400, cors);
 
+    // server-side daily cap — only active when a KV namespace named RL is bound.
+    // Eventually consistent, so a fast burst can slip a couple over; that's fine
+    // for an abuse cap, not a hard boundary. See README to enable it.
+    const day = new Date().toISOString().slice(0, 10);
+    let rlk = null, used = 0;
+    if (env.RL) {
+      rlk = rlKey(request, day);
+      used = parseInt((await env.RL.get(rlk)) || '0', 10) || 0;
+      if (used >= DAILY_CAP)
+        return json({ error: 'daily limit reached', limited: true }, 429, cors);
+    }
+
     const model = env.MODEL || DEFAULT_MODEL;
     let upstream;
     try {
@@ -166,6 +183,10 @@ export default {
     const text = (Array.isArray(parts) ? parts.map(p => p.text || '').join('') : '').trim();
 
     if (!text) return json({ error: 'empty reflection' }, 502, cors);
+
+    // count this successful reflection against today's allowance
+    if (env.RL && rlk) await env.RL.put(rlk, String(used + 1), { expirationTtl: RL_TTL });
+
     return json({ reflection: text }, 200, cors);
   },
 };

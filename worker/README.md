@@ -55,15 +55,32 @@ Secrets (via `wrangler secret put`, never in the repo):
 | `GEMINI_API_KEY` | Required. Your free Google AI Studio key. |
 | `APP_TOKEN` | Optional. If set, the Worker requires a matching `x-app-token` header. |
 
-## The daily cap is client-side — add a real one before scaling
+## The daily cap — enable server-side enforcement
 
-The app limits each person to a few reflections a day, but that count lives in the
-browser and a determined user can reset it. Before this serves real traffic, add
-**server-side** rate limiting here — [Cloudflare Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/),
-KV, or Durable Objects keyed by IP — so the shared key can't be drained. The
-`ALLOWED_ORIGIN` / `APP_TOKEN` guards are soft (a static site can't keep a real
-secret); [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/)
-is the sturdier gate.
+The app limits each person to `5` reflections a day, but that count lives in the
+browser and a determined user can reset it. This Worker enforces the same cap
+**server-side**, keyed by client IP, so the shared key can't be drained — it turns
+on the moment a [KV namespace](https://developers.cloudflare.com/kv/) named `RL` is
+bound:
+
+```sh
+wrangler kv namespace create RL
+# paste the printed id into wrangler.toml (uncomment the [[kv_namespaces]] block)
+wrangler deploy
+```
+
+With `RL` bound, a person over the cap gets a `429` and the app shows
+"come back tomorrow". Notes:
+
+- The counter is **eventually consistent**, so a rapid burst can slip a couple over
+  `5` — fine for an abuse cap, not a hard boundary.
+- KV's free tier allows ~1k writes/day (≈ 200 people/day at 5 each); enable a paid
+  plan or move to Durable Objects to go beyond that.
+- `DAILY_CAP` in `worker.js` is kept in step with the app's `AI_DAILY_CAP`.
+
+The `ALLOWED_ORIGIN` / `APP_TOKEN` guards are still soft (a static site can't keep
+a real secret); [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/)
+is the sturdier gate for locking the endpoint down.
 
 ## Cost
 
