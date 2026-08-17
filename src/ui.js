@@ -804,6 +804,14 @@ async function askReflection(){
       headers:{ 'content-type':'application/json' },
       body: JSON.stringify(buildReflect(flow.m))
     });
+    if(res.status === 429){                       // the backend says this person is out for today
+      const a = D.ai = D.ai || {};
+      a.day = aiToday(); a.used = AI_DAILY_CAP;    // trust the server; sync the local count up to the cap
+      persist();
+      if(out){ out.className = 'aiout err'; out.textContent = c().aiCapDone; }
+      if(btn) btn.classList.add('hidden');
+      return;
+    }
     if(!res.ok) throw new Error('http '+res.status);
     const data = await res.json();
     const text = ((data && data.reflection) || '').trim();

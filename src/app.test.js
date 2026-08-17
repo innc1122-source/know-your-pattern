@@ -305,14 +305,23 @@ console.log('\n6h. AI reflection: a capped, backend-provided product feature');
   w.__kyp.D.ai = { day: '2000-01-01', used: 5 };
   t("yesterday's count does not carry over", w.__kyp.aiLeft()===5);
 
-  // --- failure degrades gently and spends no use ---
+  // --- a generic failure degrades gently and spends no use ---
   wipe();
-  w.fetch = async () => ({ ok:false, status:429 });
+  w.fetch = async () => ({ ok:false, status:503 });
   await capture('又一次','autonomy','paused');
   doc.getElementById('aiBtn').click(); await wait(90);
   t('a failed reflection says so, softly', (doc.getElementById('aiOut')||{}).textContent.includes('没连上'), (doc.getElementById('aiOut')||{}).textContent);
   t('a failure spends no use', w.__kyp.aiLeft()===5, JSON.stringify(w.__kyp.D.ai));
   t('the flow can still be finished', !!btns().find(x=>x.textContent.includes('完成')));
+  w.closeFlow();
+
+  // --- a server 429 means "you're out today": sync to the cap, not an error ---
+  wipe();
+  w.fetch = async () => ({ ok:false, status:429 });
+  await capture('后端说不行了','autonomy','held_in');
+  doc.getElementById('aiBtn').click(); await wait(90);
+  t('a 429 shows the cap line, not a soft error', (doc.getElementById('aiOut')||{}).textContent.includes('今天的次数用完了'), (doc.getElementById('aiOut')||{}).textContent);
+  t('and syncs the local count up to the cap', w.__kyp.aiLeft()===0, JSON.stringify(w.__kyp.D.ai));
   w.closeFlow();
   w.__kyp.aiEndpoint = '';   // leave AI off for the remaining sections
 }
