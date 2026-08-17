@@ -760,7 +760,7 @@ function letgoView(){
    + a small window of reaction-moments leave the device; light notes
    (D.notes) are never read here. The backend owns the model and the prompt.
    ===================================================================== */
-let AI_ENDPOINT = '';          // set to your deployed reflection Worker URL to turn AI on for everyone
+let AI_ENDPOINT = 'https://patterna-reflect.innc1122.workers.dev';   // the deployed reflection backend; '' turns AI off everywhere
 const AI_DAILY_CAP = 5;
 const aiToday = () => new Date().toISOString().slice(0,10);
 function aiUsedToday(){ const a = D.ai || {}; return a.day === aiToday() ? (a.used || 0) : 0; }
