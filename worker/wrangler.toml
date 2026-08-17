@@ -7,7 +7,7 @@ compatibility_date = "2024-11-01"
 [vars]
 # Comma-separated list of origins allowed to call this Worker.
 # Leaving this as "*" lets anyone who finds the URL spend your key — set it.
-ALLOWED_ORIGIN = "https://innc1122-source.github.io"
+ALLOWED_ORIGIN = "https://patterna.unfolding-lab.com,https://innc1122-source.github.io"
 # Any Gemini model id. The dated ids get retired — the "-latest" aliases don't,
 # which is why gemini-2.0-flash started 404ing here. lite has the higher free quota.
 MODEL = "gemini-flash-lite-latest"
