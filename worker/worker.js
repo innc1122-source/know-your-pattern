@@ -91,6 +91,7 @@ Hard rules:
 - Mirror, don't diagnose. Never label who they are ("you're anxious", "you're a people-pleaser"). Stay with what THEY wrote.
 - Be specific to their actual words. Generic comfort is worse than saying nothing.
 - Only connect this moment to earlier ones when there is a real thread. If there isn't, don't manufacture one.
+- If no earlier moments are given, this is the first thing they have ever recorded. Never imply recurrence: no "again", "as usual", "another time", "you tend to", "this keeps happening". There is nothing yet to keep happening.
 - No advice, no fixes, no action items. At most one gentle, genuine question — and only if it opens something.
 - Short: 2 to 4 sentences, ONE paragraph, no blank lines. Plain language. No therapy-speak, no mysticism, no emojis, no headings.
 - They decide what is true. Offer, never assert: "it looks like…", "maybe…", not "you clearly…".
@@ -110,6 +111,7 @@ const SCAFFOLD = {
     about: t => `  这是关于什么：${t}`,
     did: t => `  他们做了什么：${t}`,
     recent: '最近的几条（从近到远）：',
+    alone: '这是他们记下的第一条，之前没有任何东西可以比对。不要出现「又一次」「还是」「总是」「老是」这类说法——目前没有任何重复存在。',
     ago: d => `${d} 天前`, earlier: '更早',
     pic: (k, s) => `目前的画面：围绕「${s}」，${k === 'pattern' ? '可能是一个模式' : '刚刚开始成形'}——这不是结论，也不要当成事实说出来。`,
     go: '现在回应这一条，遵守上面每一条规则。',
@@ -123,6 +125,7 @@ const SCAFFOLD = {
     about: t => `  What it was about: ${t}`,
     did: t => `  What they did: ${t}`,
     recent: 'A few recent moments (most recent first):',
+    alone: 'This is the first moment they have recorded; there is nothing earlier to compare it with. Do not say "again", "as usual", "you tend to" — no repetition exists yet.',
     ago: d => `${d}d ago`, earlier: 'earlier',
     pic: (k, s) => `The picture so far: ${k === 'pattern' ? 'a possible pattern' : 'something just starting to form'} around "${s}" — not a conclusion, and not to be stated as fact.`,
     go: 'Reflect on this moment now, following every rule.',
@@ -146,7 +149,9 @@ function userMessage(p) {
   if (cur.response) lines.push(T.did(cur.response));
 
   const recent = Array.isArray(p.recent) ? p.recent : [];
-  if (recent.length) {
+  if (!recent.length) {
+    lines.push('', T.alone);
+  } else {
     lines.push('', T.recent);
     recent.forEach(m => {
       const when = typeof m.daysAgo === 'number' ? T.ago(m.daysAgo) : T.earlier;
