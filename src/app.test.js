@@ -211,7 +211,7 @@ console.log('\n6e. off-list moments are received warmly, not left empty');
   ot.value = '插不上话'; ot.dispatchEvent(new w.Event('input',{bubbles:true}));
   await fc('下一步');
   await fc('当时挺明显的'); await fc('先停了一下');
-  t('off-list mirror is warm, not empty', ftxt().includes('不在我的词表里'), ftxt().slice(0,160));
+  t('off-list mirror is warm, not empty', ftxt().includes('不在我给的选项里'), ftxt().slice(0,160));
   t('off-list keeps the typed word', ftxt().includes('插不上话'), ftxt().slice(0,160));
   t('no empty-quote bug', !/「」/.test(ftxt()), ftxt().slice(0,160));
   await fc('完成'); await fc('放下');
