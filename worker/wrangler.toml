@@ -2,11 +2,11 @@ name = "patterna-reflect"
 main = "worker.js"
 compatibility_date = "2024-11-01"
 
-# Public-ish config. Secrets (ANTHROPIC_API_KEY, optional APP_TOKEN) are NOT
+# Public-ish config. Secrets (GEMINI_API_KEY, optional APP_TOKEN) are NOT
 # stored here — set them with `wrangler secret put`. See README.md.
 [vars]
 # Comma-separated list of origins allowed to call this Worker.
 # Leaving this as "*" lets anyone who finds the URL spend your key — set it.
 ALLOWED_ORIGIN = "https://innc1122-source.github.io"
-# Any Claude model id. Swap to a cheaper one (e.g. claude-haiku-4-5-20251001) any time.
-MODEL = "claude-sonnet-5"
+# Any Gemini model id. gemini-2.0-flash is free-tier eligible and fast.
+MODEL = "gemini-2.0-flash"

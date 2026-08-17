@@ -1,23 +1,28 @@
 /* =====================================================================
-   PATTERNA reflection proxy — a tiny Cloudflare Worker.
+   PATTERNA reflection backend — a tiny Cloudflare Worker.
 
-   It holds your Anthropic API key server-side and turns one captured
+   It holds a Google Gemini API key server-side and turns one captured
    moment (plus a little recent context) into a short, reflective note.
    The app calls this; the key never reaches the browser.
 
    What it deliberately does NOT do: store anything, log the content,
    or accept anything other than a single reflection request.
 
+   The app also caps each person at a few reflections a day on its side.
+   That cap is client-side and bypassable — before this serves real
+   traffic, add server-side rate limiting here (Cloudflare KV / Durable
+   Objects / Rate Limiting) so the shared key can't be drained.
+
    Secrets / vars (set with `wrangler secret put` and wrangler.toml):
-     ANTHROPIC_API_KEY  (secret, required)
-     ALLOWED_ORIGIN     (var, strongly recommended — comma-separated
-                         list of origins allowed to call this Worker.
-                         Unset = "*", which lets anyone spend your key.)
-     MODEL              (var, optional — defaults below)
-     APP_TOKEN          (secret, optional — a soft shared guard; see README)
+     GEMINI_API_KEY  (secret, required — a free Google AI Studio key)
+     ALLOWED_ORIGIN  (var, strongly recommended — comma-separated list of
+                      origins allowed to call this Worker. Unset = "*",
+                      which lets anyone spend your key.)
+     MODEL           (var, optional — defaults below)
+     APP_TOKEN       (secret, optional — a soft shared guard; see README)
    ===================================================================== */
 
-const DEFAULT_MODEL = 'claude-sonnet-5';
+const DEFAULT_MODEL = 'gemini-2.0-flash';
 const MAX_TOKENS = 320;
 const MAX_TEXT = 320;     // per-field character cap we accept from the client
 const MAX_RECENT = 12;    // most recent moments we'll consider
@@ -119,8 +124,8 @@ export default {
     if (env.APP_TOKEN && request.headers.get('x-app-token') !== env.APP_TOKEN)
       return json({ error: 'unauthorized' }, 401, cors);
 
-    if (!env.ANTHROPIC_API_KEY)
-      return json({ error: 'server missing ANTHROPIC_API_KEY' }, 500, cors);
+    if (!env.GEMINI_API_KEY)
+      return json({ error: 'server missing GEMINI_API_KEY' }, 500, cors);
 
     let body;
     try { body = clean(await request.json()); }
@@ -129,23 +134,22 @@ export default {
     if (!body.current.text)
       return json({ error: 'nothing to reflect on' }, 400, cors);
 
+    const model = env.MODEL || DEFAULT_MODEL;
     let upstream;
     try {
-      upstream = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: env.MODEL || DEFAULT_MODEL,
-          max_tokens: MAX_TOKENS,
-          temperature: 0.7,
-          system: systemPrompt(body.lang),
-          messages: [{ role: 'user', content: userMessage(body) }],
-        }),
-      });
+      upstream = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/' + model +
+        ':generateContent?key=' + encodeURIComponent(env.GEMINI_API_KEY),
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt(body.lang) }] },
+            contents: [{ role: 'user', parts: [{ text: userMessage(body) }] }],
+            generationConfig: { maxOutputTokens: MAX_TOKENS, temperature: 0.7 },
+          }),
+        }
+      );
     } catch (e) {
       return json({ error: 'upstream unreachable' }, 502, cors);
     }
@@ -157,8 +161,9 @@ export default {
 
     let data;
     try { data = await upstream.json(); } catch (e) { return json({ error: 'bad upstream' }, 502, cors); }
-    const text = (data && Array.isArray(data.content) ? data.content : [])
-      .filter(b => b && b.type === 'text').map(b => b.text).join('').trim();
+    const parts = data && data.candidates && data.candidates[0] &&
+                  data.candidates[0].content && data.candidates[0].content.parts;
+    const text = (Array.isArray(parts) ? parts.map(p => p.text || '').join('') : '').trim();
 
     if (!text) return json({ error: 'empty reflection' }, 502, cors);
     return json({ reflection: text }, 200, cors);

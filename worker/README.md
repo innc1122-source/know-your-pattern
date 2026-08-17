@@ -1,37 +1,33 @@
-# PATTERNA reflection proxy
+# PATTERNA reflection backend
 
 A tiny [Cloudflare Worker](https://developers.cloudflare.com/workers/) that holds
-your Anthropic API key and turns one captured moment into a short reflective note.
-The app calls this Worker; **the key never reaches the browser.**
+one **Google Gemini** API key and turns a captured moment into a short reflective
+note. The app calls this Worker; **the key never reaches the browser**, so nobody
+using the app needs a key of their own.
 
-The app works completely without it. This is opt-in: until you set it up in the
-app's settings, no reflection button appears and nothing ever leaves your device.
+This is what makes AI reflection a product feature rather than a setting: you
+deploy this once, point the app at it, and it works for everyone — capped at a
+few reflections per person per day.
 
-> **Just want it working for yourself?** You don't need this Worker at all. The
-> app's settings also take an Anthropic key directly — it stays in your browser
-> and calls the model itself, nothing to deploy. This Worker is the sturdier path
-> for **hiding the key** once other people use it; it's the first step toward the
-> multi-user / end-to-end phase.
-
-## What leaves your device when you tap "reflect"
+## What reaches the model
 
 Only the current moment plus a small window of recent moments — each as
-text + the plain-language labels you picked (what it was about, your reaction,
-what you did). **Your "bright" light notes are never sent**, and nothing is
-stored or logged, here or upstream.
+text + the plain-language labels the person picked (what it was about, their
+reaction, what they did). **"Bright" light notes are never sent**, and nothing is
+stored or logged, here or by this Worker.
 
 ## Deploy (about 5 minutes)
 
 You need a [Cloudflare account](https://dash.cloudflare.com/sign-up) (free tier is
-fine) and an [Anthropic API key](https://console.anthropic.com/).
+fine) and a **free** [Google AI Studio API key](https://aistudio.google.com/apikey).
 
 ```sh
 npm install -g wrangler
 cd worker
 wrangler login
 
-# your key — stored as an encrypted secret, never in the repo
-wrangler secret put ANTHROPIC_API_KEY
+# your Gemini key — stored as an encrypted secret, never in the repo
+wrangler secret put GEMINI_API_KEY
 
 # optional soft guard (see note below)
 # wrangler secret put APP_TOKEN
@@ -40,8 +36,8 @@ wrangler deploy
 ```
 
 `wrangler deploy` prints a URL like `https://patterna-reflect.<you>.workers.dev`.
-Open the app → **Me / 我** → **AI reflection**, paste that URL (and the token if you
-set one), Save. Capture a moment and the reflect option appears.
+Put that URL into the app's `AI_ENDPOINT` constant (in `src/ui.js`) and redeploy
+the site — the reflect button then appears for everyone, no key-pasting.
 
 ## Configuration
 
@@ -49,27 +45,29 @@ Set in `wrangler.toml` under `[vars]` (redeploy to apply):
 
 | name | what it does |
 | --- | --- |
-| `ALLOWED_ORIGIN` | Comma-separated origins allowed to call the Worker. Point it at wherever the app is served (e.g. your GitHub Pages origin, later your custom domain). Leaving it `*` lets **anyone** who finds the URL spend your key. |
-| `MODEL` | Any Claude model id. Default `claude-sonnet-5`; drop to `claude-haiku-4-5-20251001` for cheaper/faster. |
+| `ALLOWED_ORIGIN` | Comma-separated origins allowed to call the Worker. Point it at wherever the app is served. Leaving it `*` lets **anyone** who finds the URL spend your key. |
+| `MODEL` | Any Gemini model id. Default `gemini-2.0-flash` — free-tier eligible and fast. |
 
 Secrets (via `wrangler secret put`, never in the repo):
 
 | name | what it does |
 | --- | --- |
-| `ANTHROPIC_API_KEY` | Required. Your Anthropic key. |
-| `APP_TOKEN` | Optional. If set, the Worker requires a matching `x-app-token` header, which the app sends from the token field in settings. |
+| `GEMINI_API_KEY` | Required. Your free Google AI Studio key. |
+| `APP_TOKEN` | Optional. If set, the Worker requires a matching `x-app-token` header. |
 
-## A note on protecting the endpoint
+## The daily cap is client-side — add a real one before scaling
 
-`ALLOWED_ORIGIN` and `APP_TOKEN` are **soft** guards: a static web app can't keep a
-real secret, so a determined person reading the page source could copy the token
-and call the Worker. For a personal, single-user setup that's an acceptable trade.
-Before this is shared more widely, put real protection in front of it —
-[Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/),
-a rate limit, or moving auth to a real login — which is exactly the multi-user /
-end-to-end phase this Worker is the first step toward.
+The app limits each person to a few reflections a day, but that count lives in the
+browser and a determined user can reset it. Before this serves real traffic, add
+**server-side** rate limiting here — [Cloudflare Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/),
+KV, or Durable Objects keyed by IP — so the shared key can't be drained. The
+`ALLOWED_ORIGIN` / `APP_TOKEN` guards are soft (a static site can't keep a real
+secret); [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/)
+is the sturdier gate.
 
 ## Cost
 
-One reflection is a small prompt and a ≤320-token reply — cents at most for
-personal use. Set a spend cap in the Anthropic console if you want a hard ceiling.
+On Gemini's **free tier** this is $0, within Google's per-key rate limits. Note:
+on the free tier Google may use the content to improve its models — fine for a
+reflective aside, but say so honestly if you productize it. Enabling billing lifts
+the limits and stops that data use.
