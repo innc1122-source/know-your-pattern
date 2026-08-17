@@ -253,76 +253,102 @@ console.log('\n6g. a quiet, notes-only week still echoes the bright moment');
   t('the note stays out of the engine', w.__kyp.D.notes.length===1 && !('signal' in w.__kyp.D.notes[0]) && w.__kyp.D.moments.length===2);
 }
 
-console.log('\n6h. AI reflection: a capped, backend-provided product feature');
+console.log('\n6h. the AI read lives on the pattern, not on a fresh moment');
 {
-  // --- the payload builder: readable labels, moments only, never light notes ---
-  wipe();
-  seed(3,'autonomy','held_in','排期又被改了');
-  seed(1,'heard','react_now','会上没人接我的话');
-  w.__kyp.D.notes.push({id:'bnx', ts:Date.now(), text:'今天的秘密好心情', bright:true});
-  const cur = w.__kyp.D.moments[w.__kyp.D.moments.length-1];
-  const payload = w.__kyp.buildReflect(cur);
-  t('payload carries the current moment', !!payload.current && payload.current.text.includes('没人接我的话'), JSON.stringify(payload.current));
-  t('signal is a readable label, not a code', payload.current.signal==='被听见', payload.current.signal);
-  t('a bright note never leaves the device', !JSON.stringify(payload).includes('秘密好心情'), JSON.stringify(payload).slice(0,200));
-  t('language rides along', payload.lang==='zh');
-
-  // --- off until a backend is wired: no endpoint → no button ---
-  w.__kyp.aiEndpoint = '';
+  // --- it stays out of the capture flow: that beat ends at "set it down" ---
+  w.__kyp.aiEndpoint = 'https://reflect.test/x';
   wipe();
   await capture('说点什么','autonomy','held_in');
   t('the mirror is showing', doc.getElementById('overlay').classList.contains('on'));
-  t('no reflect button without a backend', !doc.getElementById('aiBtn'));
-  w.closeFlow();
+  t('no read button in the capture flow', !doc.getElementById('aiBtn'), ftxt().slice(0,120));
+  t('and no AI copy anywhere in the flow', !ftxt().includes('读一遍'), ftxt().slice(0,140));
+  await fc('完成');
+  t('the flow still ends on the letting-go beat', btns().some(b=>b.textContent.includes('放下')), ftxt().slice(0,120));
+  await drain(); w.closeFlow();
 
-  // --- endpoint set + success: posts to the backend, lands in a voice card, spends a use ---
-  w.__kyp.aiEndpoint = 'https://reflect.test/x';
+  // --- no pattern yet → nothing to read ---
   wipe();
-  w.__kyp.D.notes.push({id:'bz', ts:Date.now(), text:'不该出现的亮点', bright:true});
+  seed(3,'autonomy','held_in','排期又被改了');
+  w.go('patterns');
+  t('no read offered before a pattern exists', !doc.getElementById('aiBtn'), txt().slice(0,120));
+
+  // --- the payload: the moments behind THIS pattern, in their own words ---
+  wipe();
+  [30,23,16,9,4].forEach((d,i)=>seed(d,'autonomy', i<2?'react_now':'held_in','排期被改了第'+i+'次'));
+  seed(2,'heard','react_now','会上没人接我的话');           // a different signal — not this pattern
+  w.__kyp.D.moments[0].note = '我可能不是怕事情多，是讨厌别人替我决定。';
+  w.__kyp.D.notes.push({id:'bnx', ts:Date.now(), text:'今天的秘密好心情', bright:true});
+  const pat = w.__kyp.KYP.pattern(w.__kyp.D.moments);
+  t('a pattern really did form', !!pat && pat.signal==='autonomy', JSON.stringify(pat));
+  const payload = w.__kyp.buildPatternRead(pat);
+  t('payload carries the pattern, not a single moment', !!payload.pattern && !payload.current, JSON.stringify(payload).slice(0,120));
+  t('signal is a readable label, not a code', payload.pattern.signal==='自主权', payload.pattern.signal);
+  t('it carries the moments behind the pattern', payload.pattern.moments.length===5 && payload.pattern.moments[0].text.includes('排期被改了第4次'), JSON.stringify(payload.pattern.moments[0]));
+  t('moments from other signals stay out', !JSON.stringify(payload).includes('没人接我的话'), JSON.stringify(payload).slice(0,200));
+  t("their own hypothesis rides along", payload.pattern.note.includes('讨厌别人替我决定'), payload.pattern.note);
+  t('the competing explanation rides along', !!payload.pattern.alternative, payload.pattern.alternative);
+  t('confidence rides along', typeof payload.pattern.confidence==='number', String(payload.pattern.confidence));
+  t('a bright note never leaves the device', !JSON.stringify(payload).includes('秘密好心情'), JSON.stringify(payload).slice(0,200));
+  t('language rides along', payload.lang==='zh');
+
+  // --- off until a backend is wired ---
+  w.__kyp.aiEndpoint = '';
+  w.go('patterns');
+  t('no read button without a backend', !doc.getElementById('aiBtn'));
+  w.__kyp.aiEndpoint = 'https://reflect.test/x';
+
+  // --- the read: offered under the evidence, lands in a voice card, spends a use ---
   let sent = null;
-  w.fetch = async (url, opts) => { sent = { url, opts }; return { ok:true, json: async()=>({ reflection:'看起来你更在意的是被听见。' }) }; };
-  await capture('会上又没人接话','heard','held_in');
-  t('reflect button appears when the backend is wired', !!doc.getElementById('aiBtn'), ftxt().slice(0,80));
-  t('the privacy line is shown', ftxt().includes('不含「亮的时刻」'), ftxt().slice(-140));
-  t('remaining uses are shown', ftxt().includes('今天还剩'), ftxt().slice(-140));
+  w.fetch = async (url, opts) => { sent = { url, opts }; return { ok:true, json: async()=>({ reflection:'五次里你有三次忍住没说。' }) }; };
+  w.go('patterns');
+  t('the read is offered on the patterns tab', !!doc.getElementById('aiBtn'), txt().slice(-140));
+  t('it sits under the evidence it would read', txt().includes('我们为什么这么说') && txt().indexOf('我们为什么这么说') < txt().indexOf('让它读一遍这几次'), txt().slice(-200));
+  t('the privacy line is shown', txt().includes('不含「亮的时刻」'), txt().slice(-140));
+  t('remaining uses are shown', txt().includes('今天还剩'), txt().slice(-140));
   doc.getElementById('aiBtn').click(); await wait(90);
   t('posts the payload to the backend', !!sent && sent.url==='https://reflect.test/x', sent && sent.url);
-  t('the bright note is not in the request body', !!sent && !sent.opts.body.includes('不该出现的亮点'), sent && sent.opts.body.slice(0,160));
-  t('the reflection lands in a voice card', (()=>{ const o=doc.getElementById('aiOut'); return !!o && o.className.includes('ready') && o.textContent.includes('被听见'); })(), (doc.getElementById('aiOut')||{}).textContent);
-  t("a success spends one of today's uses", w.__kyp.D.ai.used===1 && w.__kyp.aiLeft()===4, JSON.stringify(w.__kyp.D.ai));
-  w.closeFlow();
+  t('the bright note is not in the request body', !!sent && !sent.opts.body.includes('秘密好心情'), sent && sent.opts.body.slice(0,160));
+  t('the read lands in a voice card', (()=>{ const o=doc.getElementById('aiOut'); return !!o && o.className.includes('ready') && o.textContent.includes('忍住没说'); })(), (doc.getElementById('aiOut')||{}).textContent);
+  t("a success spends one of today's uses", w.__kyp.D.ai.used===1 && w.__kyp.aiLeft()===2, JSON.stringify(w.__kyp.D.ai));
 
-  // --- the daily cap: once spent, no button, a gentle line instead ---
-  wipe();
-  w.__kyp.D.ai = { day: new Date().toISOString().slice(0,10), used: 5 };
-  await capture('第五次之后','autonomy','held_in');
+  // --- a read is kept: leaving the tab and coming back costs nothing ---
+  w.go('home'); w.go('patterns');
+  t('the read is still there after leaving the tab', txt().includes('忍住没说'), txt().slice(-160));
+  t('and the button is gone, so it cannot be re-spent', !doc.getElementById('aiBtn'));
+  t('no second request was made', w.__kyp.D.ai.used===1, JSON.stringify(w.__kyp.D.ai));
+
+  // --- when the picture moves, a fresh read is offered ---
+  w.__kyp.D.ai.read.key = '自主权:999';
+  w.go('patterns');
+  t('a moved pattern offers a new read', !!doc.getElementById('aiBtn'), txt().slice(-140));
+  t('and the stale read is not shown', !txt().includes('忍住没说'), txt().slice(-160));
+
+  // --- the daily cap: no button, a gentle line instead ---
+  w.__kyp.D.ai = { day: new Date().toISOString().slice(0,10), used: 3 };
+  w.go('patterns');
   t('no button once the cap is spent', !doc.getElementById('aiBtn'));
-  t('a "come back tomorrow" line shows', ftxt().includes('今天的次数用完了'), ftxt().slice(-140));
+  t('a "come back tomorrow" line shows', txt().includes('今天的次数用完了'), txt().slice(-140));
   t('aiLeft is zero at the cap', w.__kyp.aiLeft()===0);
-  w.closeFlow();
 
   // --- the cap resets on a new day ---
-  w.__kyp.D.ai = { day: '2000-01-01', used: 5 };
-  t("yesterday's count does not carry over", w.__kyp.aiLeft()===5);
+  w.__kyp.D.ai = { day: '2000-01-01', used: 3 };
+  t("yesterday's count does not carry over", w.__kyp.aiLeft()===3);
 
   // --- a generic failure degrades gently and spends no use ---
-  wipe();
   w.fetch = async () => ({ ok:false, status:503 });
-  await capture('又一次','autonomy','paused');
+  w.go('patterns');
   doc.getElementById('aiBtn').click(); await wait(90);
-  t('a failed reflection says so, softly', (doc.getElementById('aiOut')||{}).textContent.includes('没连上'), (doc.getElementById('aiOut')||{}).textContent);
-  t('a failure spends no use', w.__kyp.aiLeft()===5, JSON.stringify(w.__kyp.D.ai));
-  t('the flow can still be finished', !!btns().find(x=>x.textContent.includes('完成')));
-  w.closeFlow();
+  t('a failed read says so, softly', (doc.getElementById('aiOut')||{}).textContent.includes('没连上'), (doc.getElementById('aiOut')||{}).textContent);
+  t('a failure spends no use', w.__kyp.aiLeft()===3, JSON.stringify(w.__kyp.D.ai));
+  t('and the pattern card is still fully readable', txt().includes('可信度') && txt().includes('我们为什么这么说'), txt().slice(0,140));
 
   // --- a server 429 means "you're out today": sync to the cap, not an error ---
-  wipe();
+  w.__kyp.D.ai = { day: '2000-01-01', used: 0 };
   w.fetch = async () => ({ ok:false, status:429 });
-  await capture('后端说不行了','autonomy','held_in');
+  w.go('patterns');
   doc.getElementById('aiBtn').click(); await wait(90);
   t('a 429 shows the cap line, not a soft error', (doc.getElementById('aiOut')||{}).textContent.includes('今天的次数用完了'), (doc.getElementById('aiOut')||{}).textContent);
   t('and syncs the local count up to the cap', w.__kyp.aiLeft()===0, JSON.stringify(w.__kyp.D.ai));
-  w.closeFlow();
   w.__kyp.aiEndpoint = '';   // leave AI off for the remaining sections
 }
 
