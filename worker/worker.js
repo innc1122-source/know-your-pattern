@@ -22,7 +22,8 @@
      APP_TOKEN       (secret, optional — a soft shared guard; see README)
    ===================================================================== */
 
-const DEFAULT_MODEL = 'gemini-2.0-flash';
+// prefer a "-latest" alias: dated model ids get retired and start 404ing
+const DEFAULT_MODEL = 'gemini-flash-lite-latest';
 const MAX_TOKENS = 320;
 const MAX_TEXT = 320;     // per-field character cap we accept from the client
 const MAX_RECENT = 12;    // most recent moments we'll consider
