@@ -2,7 +2,7 @@
    UI
    ===================================================================== */
 let D = Store.load();
-D.ai = Object.assign({url:'',token:'',key:''}, D.ai);   // fill any fields missing from older stored data
+D.ai = Object.assign({day:'',used:0}, D.ai);   // per-day AI usage counter; older stored data may lack it
 let L = D.lang || 'zh';
 let tab = 'home';
 let flow = null;          // active capture flow state
@@ -402,15 +402,6 @@ function viewMe(){
     <button class="btn" onclick="go('gaps')">${c().seeGaps}</button>
     <button class="btn" onclick="startOnboard()">${c().obAgain}</button>
     <div class="rule"></div>
-    <div class="eyebrow mb">${c().aiT}</div>
-    <p class="note">${c().aiB}</p>
-    <input id="aiKey" class="tin" type="password" autocomplete="off" placeholder="${c().aiKeyPh}" value="${esc((D.ai||{}).key||'')}">
-    <p class="note aihint">${c().aiKeyNote}</p>
-    <input id="aiUrl" class="tin" type="url" autocomplete="off" placeholder="${c().aiUrlPh}" value="${esc((D.ai||{}).url||'')}">
-    <input id="aiToken" class="tin" type="text" autocomplete="off" placeholder="${c().aiTokenPh}" value="${esc((D.ai||{}).token||'')}">
-    <p class="note aihint">${c().aiUrlNote}</p>
-    <button class="btn" onclick="saveAI(this)">${c().aiSave}</button>
-    <div class="rule"></div>
     <div class="eyebrow mb">${c().yourData}</div>
     <button class="btn" onclick="doExport()">${c().exportB}</button>
     <button class="btn" onclick="openImport()">${c().importB}</button>
@@ -651,11 +642,11 @@ function revealView(){
       </div>
       <div class="saidcard"><div class="who">${c().speaker}</div>
         <p>${mline}</p></div>
-      ${aiOn() ? `<div class="aiwrap">
+      ${aiOn() ? (aiLeft() > 0 ? `<div class="aiwrap">
         <button id="aiBtn" class="cta ghost" onclick="askReflection()">${c().aiCta}</button>
         <div id="aiOut" class="aiout"></div>
-        <p class="note aisends">${c().aiSends}</p>
-      </div>` : ''}
+        <p class="note aisends">${c().aiSends} · ${c().aiCapLeft(aiLeft())}</p>
+      </div>` : `<p class="note aisends aicapdone">${c().aiCapDone}</p>`) : ''}
       ${nextBtn(c().done)}`;
   }
 
@@ -763,14 +754,18 @@ function letgoView(){
 }
 
 /* =====================================================================
-   AI REFLECTION — opt-in, off by default. Nothing here runs, and no
-   button appears, until settings hold either an Anthropic key (direct,
-   simplest) or a backend URL (a proxy that hides the key). When it runs,
-   only the current moment + a small window of reaction-moments leave the
-   device. Light notes (D.notes) are never read here.
+   AI REFLECTION — a product feature, off until AI_ENDPOINT points at the
+   deployed reflection backend (see worker/). Each person gets AI_DAILY_CAP
+   reflections a day, counted locally. When it runs, only the current moment
+   + a small window of reaction-moments leave the device; light notes
+   (D.notes) are never read here. The backend owns the model and the prompt.
    ===================================================================== */
-const REFLECT_MODEL = 'claude-sonnet-5', REFLECT_MAXTOK = 320;
-function aiOn(){ return !!(D.ai && (D.ai.key || D.ai.url)); }
+let AI_ENDPOINT = '';          // set to your deployed reflection Worker URL to turn AI on for everyone
+const AI_DAILY_CAP = 5;
+const aiToday = () => new Date().toISOString().slice(0,10);
+function aiUsedToday(){ const a = D.ai || {}; return a.day === aiToday() ? (a.used || 0) : 0; }
+function aiLeft(){ return Math.max(0, AI_DAILY_CAP - aiUsedToday()); }
+function aiOn(){ return !!AI_ENDPOINT; }
 
 // the exact payload that leaves the device — built from moments only, with
 // human-readable labels (not internal codes) so the model gets real words
@@ -798,103 +793,31 @@ function buildReflect(cur){
   };
 }
 
-// the reflective voice — kept in step with worker/worker.js, which owns its own
-// copy so a shared backend never lets a client dictate the system prompt
-function reflectSystem(lang){
-  const tongue = lang === 'en' ? 'English' : 'Chinese';
-  return `You are the quiet, reflective voice of PATTERNA — a private tool where someone notes moments they reacted to, and slowly comes to see their own patterns. You are not a therapist, a coach, or an oracle. You are a mirror with a memory.
-
-The person has just recorded a moment. You are given that moment and a few recent ones. Reflect, briefly.
-
-Hard rules:
-- Mirror, don't diagnose. Never label who they are ("you're anxious", "you're a people-pleaser"). Stay with what THEY wrote.
-- Be specific to their actual words. Generic comfort is worse than saying nothing.
-- Only connect this moment to earlier ones when there is a real thread. If there isn't, don't manufacture one.
-- No advice, no fixes, no action items. At most one gentle, genuine question — and only if it opens something.
-- Short: 2 to 4 sentences. Plain language. No therapy-speak, no mysticism, no emojis, no headings.
-- They decide what is true. Offer, never assert: "it looks like…", "maybe…", not "you clearly…".
-- Write ONLY in ${tongue}.
-
-You are reflecting, not storing. This is theirs.`;
-}
-function reflectUserMsg(p){
-  const cur = p.current || {}, lines = ['This moment:'];
-  if(cur.text) lines.push(`  What happened: ${cur.text}`);
-  if(cur.reaction) lines.push(`  First reaction: ${cur.reaction}`);
-  if(cur.signal) lines.push(`  What it was about: ${cur.signal}`);
-  if(cur.response) lines.push(`  What they did: ${cur.response}`);
-  const recent = Array.isArray(p.recent) ? p.recent : [];
-  if(recent.length){
-    lines.push('', 'A few recent moments (most recent first):');
-    recent.forEach(m => {
-      const when = typeof m.daysAgo==='number' ? `${m.daysAgo}d ago` : 'earlier';
-      const about = m.signal ? ` [${m.signal}]` : '', did = m.response ? ` → ${m.response}` : '';
-      lines.push(`  - (${when})${about} ${m.text||''}${did}`.replace(/\s+$/,''));
-    });
-  }
-  if(p.picture && p.picture.signal){
-    const k = p.picture.kind==='pattern' ? 'a possible pattern' : 'something just starting to form';
-    lines.push('', `The picture so far: ${k} around "${p.picture.signal}" — not a conclusion, and not to be stated as fact.`);
-  }
-  lines.push('', 'Reflect on this moment now, following every rule.');
-  return lines.join('\n');
-}
-
-// direct mode: the browser calls Anthropic itself, with the user's own key
-async function reflectDirect(key, payload){
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method:'POST',
-    headers:{
-      'content-type':'application/json',
-      'x-api-key': key,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
-    body: JSON.stringify({
-      model: REFLECT_MODEL, max_tokens: REFLECT_MAXTOK, temperature: 0.7,
-      system: reflectSystem(payload.lang),
-      messages: [{ role:'user', content: reflectUserMsg(payload) }]
-    })
-  });
-  if(!res.ok) throw new Error('anthropic '+res.status);
-  const data = await res.json();
-  return ((data && Array.isArray(data.content) ? data.content : [])
-    .filter(b => b && b.type==='text').map(b => b.text).join('')).trim();
-}
-
 async function askReflection(){
-  if(!aiOn() || !flow) return;
+  if(!flow || !aiOn() || aiLeft() <= 0) return;
   const out = $('aiOut'), btn = $('aiBtn');
   if(btn){ btn.disabled = true; btn.classList.add('busy'); }
   if(out){ out.className = 'aiout thinking'; out.textContent = c().aiThinking; }
   try{
-    const ai = D.ai || {}, payload = buildReflect(flow.m);
-    let text = '';
-    if(ai.key){
-      text = await reflectDirect(ai.key, payload);        // simplest path: your key, straight to the model
-    } else {
-      const res = await fetch(ai.url, {                   // proxy path: your backend holds the key
-        method:'POST',
-        headers: Object.assign({'content-type':'application/json'}, ai.token ? {'x-app-token':ai.token} : {}),
-        body: JSON.stringify(payload)
-      });
-      if(!res.ok) throw new Error('http '+res.status);
-      const data = await res.json();
-      text = ((data && data.reflection) || '').trim();
-    }
+    const res = await fetch(AI_ENDPOINT, {
+      method:'POST',
+      headers:{ 'content-type':'application/json' },
+      body: JSON.stringify(buildReflect(flow.m))
+    });
+    if(!res.ok) throw new Error('http '+res.status);
+    const data = await res.json();
+    const text = ((data && data.reflection) || '').trim();
     if(!text) throw new Error('empty');
+    const a = D.ai = D.ai || {};                 // spend one of today's uses
+    if(a.day !== aiToday()){ a.day = aiToday(); a.used = 0; }
+    a.used = (a.used || 0) + 1;
+    persist();
     if(out){ out.className = 'aiout ready'; out.innerHTML = `<div class="who">${c().aiWho}</div><p>${esc(text)}</p>`; }
     if(btn) btn.classList.add('hidden');
   }catch(e){
     if(out){ out.className = 'aiout err'; out.textContent = c().aiErr; }
     if(btn){ btn.disabled = false; btn.classList.remove('busy'); }
   }
-}
-
-function saveAI(btn){
-  D.ai = { key: ($('aiKey').value||'').trim(), url: ($('aiUrl').value||'').trim(), token: ($('aiToken').value||'').trim() };
-  persist();
-  if(btn){ btn.textContent = c().aiSaved; setTimeout(()=>{ if(btn) btn.textContent = c().aiSave; }, 1600); }
 }
 
 function qNext(){ flow.qi++; if(flow.qi>=flow.queue.length) finishFlow(); else renderFlow(); }
@@ -1059,6 +982,7 @@ render();
 if(!D.onboarded) startOnboard();
 if(typeof window!=='undefined'){
   Object.defineProperty(window,'__kyp',{value:{
-    get D(){return D}, set D(v){D=v}, get L(){return L}, get flow(){return flow}, KYP, Store, buildReflect
+    get D(){return D}, set D(v){D=v}, get L(){return L}, get flow(){return flow}, KYP, Store, buildReflect,
+    get aiEndpoint(){return AI_ENDPOINT}, set aiEndpoint(v){AI_ENDPOINT=v}, aiLeft
   }});
 }

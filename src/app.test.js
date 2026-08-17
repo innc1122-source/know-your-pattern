@@ -253,7 +253,7 @@ console.log('\n6g. a quiet, notes-only week still echoes the bright moment');
   t('the note stays out of the engine', w.__kyp.D.notes.length===1 && !('signal' in w.__kyp.D.notes[0]) && w.__kyp.D.moments.length===2);
 }
 
-console.log('\n6h. AI reflection is opt-in, private, and degrades to nothing');
+console.log('\n6h. AI reflection: a capped, backend-provided product feature');
 {
   // --- the payload builder: readable labels, moments only, never light notes ---
   wipe();
@@ -264,77 +264,57 @@ console.log('\n6h. AI reflection is opt-in, private, and degrades to nothing');
   const payload = w.__kyp.buildReflect(cur);
   t('payload carries the current moment', !!payload.current && payload.current.text.includes('没人接我的话'), JSON.stringify(payload.current));
   t('signal is a readable label, not a code', payload.current.signal==='被听见', payload.current.signal);
-  t('recent moments travel too, newest first', Array.isArray(payload.recent) && payload.recent.length===1 && payload.recent[0].text.includes('排期'), JSON.stringify(payload.recent));
   t('a bright note never leaves the device', !JSON.stringify(payload).includes('秘密好心情'), JSON.stringify(payload).slice(0,200));
   t('language rides along', payload.lang==='zh');
 
-  // --- off by default: no backend set → no button, nothing can be sent ---
+  // --- off until a backend is wired: no endpoint → no button ---
+  w.__kyp.aiEndpoint = '';
   wipe();
   await capture('说点什么','autonomy','held_in');
   t('the mirror is showing', doc.getElementById('overlay').classList.contains('on'));
   t('no reflect button without a backend', !doc.getElementById('aiBtn'));
   w.closeFlow();
 
-  // --- configured + success: one real line lands in a voice card ---
+  // --- endpoint set + success: posts to the backend, lands in a voice card, spends a use ---
+  w.__kyp.aiEndpoint = 'https://reflect.test/x';
   wipe();
-  w.__kyp.D.ai = { url:'https://reflect.test/x', token:'sekret' };
   w.__kyp.D.notes.push({id:'bz', ts:Date.now(), text:'不该出现的亮点', bright:true});
   let sent = null;
   w.fetch = async (url, opts) => { sent = { url, opts }; return { ok:true, json: async()=>({ reflection:'看起来你更在意的是被听见。' }) }; };
   await capture('会上又没人接话','heard','held_in');
-  t('reflect button appears when configured', !!doc.getElementById('aiBtn'), ftxt().slice(0,80));
-  t('the privacy line is shown', ftxt().includes('不含「亮的时刻」'), ftxt().slice(-90));
+  t('reflect button appears when the backend is wired', !!doc.getElementById('aiBtn'), ftxt().slice(0,80));
+  t('the privacy line is shown', ftxt().includes('不含「亮的时刻」'), ftxt().slice(-140));
+  t('remaining uses are shown', ftxt().includes('今天还剩'), ftxt().slice(-140));
   doc.getElementById('aiBtn').click(); await wait(90);
-  t('called the configured backend', !!sent && sent.url==='https://reflect.test/x', sent && sent.url);
-  t('sent the app token header', !!sent && sent.opts.headers['x-app-token']==='sekret');
+  t('posts the payload to the backend', !!sent && sent.url==='https://reflect.test/x', sent && sent.url);
   t('the bright note is not in the request body', !!sent && !sent.opts.body.includes('不该出现的亮点'), sent && sent.opts.body.slice(0,160));
   t('the reflection lands in a voice card', (()=>{ const o=doc.getElementById('aiOut'); return !!o && o.className.includes('ready') && o.textContent.includes('被听见'); })(), (doc.getElementById('aiOut')||{}).textContent);
+  t("a success spends one of today's uses", w.__kyp.D.ai.used===1 && w.__kyp.aiLeft()===4, JSON.stringify(w.__kyp.D.ai));
   w.closeFlow();
 
-  // --- failure degrades gently, never breaks the flow ---
+  // --- the daily cap: once spent, no button, a gentle line instead ---
   wipe();
-  w.__kyp.D.ai = { url:'https://reflect.test/x', token:'' };
-  w.fetch = async () => ({ ok:false, status:500 });
+  w.__kyp.D.ai = { day: new Date().toISOString().slice(0,10), used: 5 };
+  await capture('第五次之后','autonomy','held_in');
+  t('no button once the cap is spent', !doc.getElementById('aiBtn'));
+  t('a "come back tomorrow" line shows', ftxt().includes('今天的次数用完了'), ftxt().slice(-140));
+  t('aiLeft is zero at the cap', w.__kyp.aiLeft()===0);
+  w.closeFlow();
+
+  // --- the cap resets on a new day ---
+  w.__kyp.D.ai = { day: '2000-01-01', used: 5 };
+  t("yesterday's count does not carry over", w.__kyp.aiLeft()===5);
+
+  // --- failure degrades gently and spends no use ---
+  wipe();
+  w.fetch = async () => ({ ok:false, status:429 });
   await capture('又一次','autonomy','paused');
   doc.getElementById('aiBtn').click(); await wait(90);
   t('a failed reflection says so, softly', (doc.getElementById('aiOut')||{}).textContent.includes('没连上'), (doc.getElementById('aiOut')||{}).textContent);
+  t('a failure spends no use', w.__kyp.aiLeft()===5, JSON.stringify(w.__kyp.D.ai));
   t('the flow can still be finished', !!btns().find(x=>x.textContent.includes('完成')));
   w.closeFlow();
-
-  // --- settings persists the backend url ---
-  wipe();
-  w.go('me');
-  doc.getElementById('aiUrl').value = 'https://saved.test/y';
-  doc.getElementById('aiToken').value = 't0ken';
-  [...doc.getElementById('view').querySelectorAll('button')].find(b=>b.textContent.trim()==='保存').click();
-  t('a saved backend url persists', w.__kyp.D.ai.url==='https://saved.test/y' && w.__kyp.D.ai.token==='t0ken', JSON.stringify(w.__kyp.D.ai));
-}
-
-console.log('\n6i. direct-key mode calls the model straight from the browser');
-{
-  wipe();
-  w.__kyp.D.ai = { key:'sk-ant-test', url:'', token:'' };
-  w.__kyp.D.notes.push({id:'bq', ts:Date.now(), text:'不该出现的私密亮点', bright:true});
-  let sent = null;
-  w.fetch = async (url, opts) => { sent = { url, opts }; return { ok:true, json: async()=>({ content:[{type:'text', text:'看起来这次你停了一下。'}] }) }; };
-  await capture('又被打断了','autonomy','paused');
-  t('reflect button appears in direct mode', !!doc.getElementById('aiBtn'));
-  doc.getElementById('aiBtn').click(); await wait(90);
-  t('calls Anthropic directly', !!sent && sent.url.includes('api.anthropic.com'), sent && sent.url);
-  t('sends the key as x-api-key', !!sent && sent.opts.headers['x-api-key']==='sk-ant-test');
-  t('opts into browser access explicitly', !!sent && sent.opts.headers['anthropic-dangerous-direct-browser-access']==='true');
-  const body = sent ? JSON.parse(sent.opts.body) : {};
-  t('builds a real prompt, not the raw payload', !!body.system && Array.isArray(body.messages) && body.messages[0].content.includes('被打断'), sent && sent.opts.body.slice(0,120));
-  t('the bright note still never leaves', !!sent && !sent.opts.body.includes('私密亮点'));
-  t('the reflection lands in a voice card', (()=>{ const o=doc.getElementById('aiOut'); return !!o && o.className.includes('ready') && o.textContent.includes('停了一下'); })(), (doc.getElementById('aiOut')||{}).textContent);
-  w.closeFlow();
-
-  // a saved key persists and takes the direct path
-  wipe();
-  w.go('me');
-  doc.getElementById('aiKey').value = 'sk-ant-saved';
-  [...doc.getElementById('view').querySelectorAll('button')].find(b=>b.textContent.trim()==='保存').click();
-  t('a saved key persists', w.__kyp.D.ai.key==='sk-ant-saved', JSON.stringify(w.__kyp.D.ai));
+  w.__kyp.aiEndpoint = '';   // leave AI off for the remaining sections
 }
 
 console.log('\n6j. the forming middle shows a living picture before the unlock');
