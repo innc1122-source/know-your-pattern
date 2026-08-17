@@ -74,14 +74,14 @@ t('no-diagnosis promise present', otxt().includes('不诊断你'));
 obtn('继续');
 t('final screen names both paths', otxt().includes('被绊到的') && otxt().includes('被打动的'), otxt().slice(0,140));
 t('final screen sets the expectation: one is analyzed, one is not', otxt().includes('永远不分析'), otxt().slice(0,180));
-obtn('记录一个瞬间');
+obtn('被绊到的瞬间');
 t('onboarding dismissed', !doc.getElementById('onboard').classList.contains('on'));
 t('onboarded flag persisted', w.__kyp.D.onboarded === true);
 
 console.log('\n1. boots clean');
 t('no script errors', errors.length === 0, errors.join(' ; '));
 t('tab bar rendered', doc.getElementById('tabbar').children.length === 4);
-t('primary CTA present', txt().includes('记录一个瞬间'));
+t('the two doors are the primary CTAs', txt().includes('被绊到的瞬间') && txt().includes('被打动的瞬间'), txt().slice(0,140));
 t('empty state', txt().includes('这里还是空的'));
 
 console.log('\n2. all tabs render on empty data');
@@ -185,12 +185,11 @@ console.log('\n6d. the light lane keeps a note without touching the engine');
   const nt = doc.getElementById('nText');
   t('light-note screen opens', !!nt && doc.getElementById('overlay').classList.contains('on'));
   nt.value = '路边的花开了'; nt.dispatchEvent(new w.Event('input',{bubbles:true}));
-  const bright = btns().find(b=>b.textContent.includes('这是好的'));
-  t('a good-mark is offered', !!bright); if(bright) bright.click(); await wait(60);
+  t('nothing asks whether it was good — this door already said so', !btns().some(b=>b.textContent.includes('这是好的')), ftxt().slice(0,140));
   const save = btns().find(b=>b.textContent.includes('保存'));
   t('save appears once there is text', !!save); if(save) save.click(); await wait(60);
   t('stored in notes, not moments', w.__kyp.D.notes.length===1 && w.__kyp.D.moments.length===0, JSON.stringify(w.__kyp.D.notes));
-  t('kept the good mark', w.__kyp.D.notes[0].bright===true);
+  t('kept as bright regardless', w.__kyp.D.notes[0].bright===true);
   t('note carries no signal — engine never sees it', !('signal' in w.__kyp.D.notes[0]));
   t('the light coda offers a quiet close', btns().some(b=>b.textContent.includes('放下')));
   btns().find(b=>b.textContent.includes('放下')).click(); await wait(60);
@@ -253,102 +252,95 @@ console.log('\n6g. a quiet, notes-only week still echoes the bright moment');
   t('the note stays out of the engine', w.__kyp.D.notes.length===1 && !('signal' in w.__kyp.D.notes[0]) && w.__kyp.D.moments.length===2);
 }
 
-console.log('\n6h. the AI read lives on the pattern, not on a fresh moment');
+console.log('\n6h. AI at the moment of recording, on both doors, three a day');
 {
-  // --- it stays out of the capture flow: that beat ends at "set it down" ---
+  // --- the snag door: offered beside "done", never in front of it ---
   w.__kyp.aiEndpoint = 'https://reflect.test/x';
   wipe();
-  await capture('说点什么','autonomy','held_in');
-  t('the mirror is showing', doc.getElementById('overlay').classList.contains('on'));
-  t('no read button in the capture flow', !doc.getElementById('aiBtn'), ftxt().slice(0,120));
-  t('and no AI copy anywhere in the flow', !ftxt().includes('读一遍'), ftxt().slice(0,140));
+  seed(3,'autonomy','held_in','排期又被改了');
+  w.__kyp.D.notes.push({id:'bnx', ts:Date.now(), text:'今天的秘密好心情', bright:true});
+  let sent = null;
+  w.fetch = async (url, opts) => { sent = { url, opts }; return { ok:true, json: async()=>({ reflection:'看起来你更在意的是被听见。' }) }; };
+  await capture('会上又没人接话','heard','held_in');
+  t('the reflect button is on the mirror', !!doc.getElementById('aiBtn'), ftxt().slice(0,140));
+  t('"done" is still there beside it', btns().some(b=>b.textContent.includes('完成')), ftxt().slice(0,140));
+  t('the privacy line is shown', ftxt().includes('不含你留住的东西'), ftxt().slice(-160));
+  t('remaining uses are shown', ftxt().includes('今天还剩 3 次'), ftxt().slice(-160));
+  doc.getElementById('aiBtn').click(); await wait(90);
+  t('posts to the backend', !!sent && sent.url==='https://reflect.test/x', sent && sent.url);
+  t('as a moment read', !!sent && JSON.parse(sent.opts.body).kind==='moment', sent && sent.opts.body.slice(0,80));
+  t('carrying this moment', !!sent && JSON.parse(sent.opts.body).current.text.includes('没人接话'), sent && sent.opts.body.slice(0,140));
+  t('and a readable signal, not a code', !!sent && JSON.parse(sent.opts.body).current.signal==='被听见', sent && sent.opts.body.slice(0,200));
+  t('a kept line never rides along', !!sent && !sent.opts.body.includes('秘密好心情'), sent && sent.opts.body.slice(0,200));
+  t('the answer lands in a voice card', (()=>{ const o=doc.getElementById('aiOut'); return !!o && o.className.includes('ready') && o.textContent.includes('被听见'); })(), (doc.getElementById('aiOut')||{}).textContent);
+  t("it spends one of today's three", w.__kyp.D.ai.used===1 && w.__kyp.aiLeft()===2, JSON.stringify(w.__kyp.D.ai));
+  t('and the flow can still be finished', btns().some(b=>b.textContent.includes('完成')));
   await fc('完成');
-  t('the flow still ends on the letting-go beat', btns().some(b=>b.textContent.includes('放下')), ftxt().slice(0,120));
+  t('which still ends on letting go', btns().some(b=>b.textContent.includes('放下')), ftxt().slice(0,120));
   await drain(); w.closeFlow();
 
-  // --- no pattern yet → nothing to read ---
-  wipe();
-  seed(3,'autonomy','held_in','排期又被改了');
-  w.go('patterns');
-  t('no read offered before a pattern exists', !doc.getElementById('aiBtn'), txt().slice(0,120));
-
-  // --- the payload: the moments behind THIS pattern, in their own words ---
-  wipe();
-  [30,23,16,9,4].forEach((d,i)=>seed(d,'autonomy', i<2?'react_now':'held_in','排期被改了第'+i+'次'));
-  seed(2,'heard','react_now','会上没人接我的话');           // a different signal — not this pattern
-  w.__kyp.D.moments[0].note = '我可能不是怕事情多，是讨厌别人替我决定。';
-  w.__kyp.D.notes.push({id:'bnx', ts:Date.now(), text:'今天的秘密好心情', bright:true});
-  const pat = w.__kyp.KYP.pattern(w.__kyp.D.moments);
-  t('a pattern really did form', !!pat && pat.signal==='autonomy', JSON.stringify(pat));
-  const payload = w.__kyp.buildPatternRead(pat);
-  t('payload carries the pattern, not a single moment', !!payload.pattern && !payload.current, JSON.stringify(payload).slice(0,120));
-  t('signal is a readable label, not a code', payload.pattern.signal==='自主权', payload.pattern.signal);
-  t('it carries the moments behind the pattern', payload.pattern.moments.length===5 && payload.pattern.moments[0].text.includes('排期被改了第4次'), JSON.stringify(payload.pattern.moments[0]));
-  t('moments from other signals stay out', !JSON.stringify(payload).includes('没人接我的话'), JSON.stringify(payload).slice(0,200));
-  t("their own hypothesis rides along", payload.pattern.note.includes('讨厌别人替我决定'), payload.pattern.note);
-  t('the competing explanation rides along', !!payload.pattern.alternative, payload.pattern.alternative);
-  t('confidence rides along', typeof payload.pattern.confidence==='number', String(payload.pattern.confidence));
-  t('a bright note never leaves the device', !JSON.stringify(payload).includes('秘密好心情'), JSON.stringify(payload).slice(0,200));
-  t('language rides along', payload.lang==='zh');
+  // --- the keep door: no "is this good?" toggle, an appreciative question instead.
+  //     Deliberately no wipe() here — both doors must draw on the same three. ---
+  w.startNote();
+  t('the keep door asks nothing about whether it was good', !doc.getElementById('nBright'), ftxt().slice(0,160));
+  t('and no "this one is good" wording survives', !ftxt().includes('这是好的'), ftxt().slice(0,160));
+  doc.getElementById('nText').value = '路上有人帮了我一把';
+  doc.getElementById('nText').dispatchEvent(new w.Event('input', { bubbles: true }));
+  sent = null;
+  w.fetch = async (url, opts) => { sent = { url, opts }; return { ok:true, json: async()=>({ reflection:'是什么让你今天愿意接住这份帮忙？' }) }; };
+  await fc('保存');
+  t('what was kept is marked bright without being asked', w.__kyp.D.notes[0].bright===true, JSON.stringify(w.__kyp.D.notes[0]));
+  t('the reflect button is offered here too', !!doc.getElementById('aiBtn'), ftxt().slice(0,160));
+  t('with its own, narrower privacy line', ftxt().includes('只读你刚写的这一句'), ftxt().slice(-160));
+  doc.getElementById('aiBtn').click(); await wait(90);
+  t('posts as a note read', !!sent && JSON.parse(sent.opts.body).kind==='note', sent && sent.opts.body.slice(0,80));
+  t('carrying only the kept line', !!sent && JSON.parse(sent.opts.body).note.text==='路上有人帮了我一把', sent && sent.opts.body.slice(0,160));
+  t('no signals, no history travel with it', !!sent && !sent.opts.body.includes('recent') && !sent.opts.body.includes('signal'), sent && sent.opts.body.slice(0,200));
+  t('the question lands in a voice card', (()=>{ const o=doc.getElementById('aiOut'); return !!o && o.className.includes('ready') && o.textContent.includes('愿意接住'); })(), (doc.getElementById('aiOut')||{}).textContent);
+  t('and it spent the second of three', w.__kyp.aiLeft()===1, JSON.stringify(w.__kyp.D.ai));
+  t('letting go is still the way out', ftxt().includes('放下'), ftxt().slice(-120));
+  w.closeNote();
 
   // --- off until a backend is wired ---
   w.__kyp.aiEndpoint = '';
-  w.go('patterns');
-  t('no read button without a backend', !doc.getElementById('aiBtn'));
+  wipe();
+  await capture('说点什么','autonomy','held_in');
+  t('no button without a backend', !doc.getElementById('aiBtn'));
+  t('and the flow is otherwise untouched', btns().some(b=>b.textContent.includes('完成')));
+  w.closeFlow();
   w.__kyp.aiEndpoint = 'https://reflect.test/x';
 
-  // --- the read: offered under the evidence, lands in a voice card, spends a use ---
-  let sent = null;
-  w.fetch = async (url, opts) => { sent = { url, opts }; return { ok:true, json: async()=>({ reflection:'五次里你有三次忍住没说。' }) }; };
-  w.go('patterns');
-  t('the read is offered on the patterns tab', !!doc.getElementById('aiBtn'), txt().slice(-140));
-  t('it sits under the evidence it would read', txt().includes('我们为什么这么说') && txt().indexOf('我们为什么这么说') < txt().indexOf('让它读一遍这几次'), txt().slice(-200));
-  t('the privacy line is shown', txt().includes('不含「亮的时刻」'), txt().slice(-140));
-  t('remaining uses are shown', txt().includes('今天还剩'), txt().slice(-140));
-  doc.getElementById('aiBtn').click(); await wait(90);
-  t('posts the payload to the backend', !!sent && sent.url==='https://reflect.test/x', sent && sent.url);
-  t('the bright note is not in the request body', !!sent && !sent.opts.body.includes('秘密好心情'), sent && sent.opts.body.slice(0,160));
-  t('the read lands in a voice card', (()=>{ const o=doc.getElementById('aiOut'); return !!o && o.className.includes('ready') && o.textContent.includes('忍住没说'); })(), (doc.getElementById('aiOut')||{}).textContent);
-  t("a success spends one of today's uses", w.__kyp.D.ai.used===1 && w.__kyp.aiLeft()===2, JSON.stringify(w.__kyp.D.ai));
-
-  // --- a read is kept: leaving the tab and coming back costs nothing ---
-  w.go('home'); w.go('patterns');
-  t('the read is still there after leaving the tab', txt().includes('忍住没说'), txt().slice(-160));
-  t('and the button is gone, so it cannot be re-spent', !doc.getElementById('aiBtn'));
-  t('no second request was made', w.__kyp.D.ai.used===1, JSON.stringify(w.__kyp.D.ai));
-
-  // --- when the picture moves, a fresh read is offered ---
-  w.__kyp.D.ai.read.key = '自主权:999';
-  w.go('patterns');
-  t('a moved pattern offers a new read', !!doc.getElementById('aiBtn'), txt().slice(-140));
-  t('and the stale read is not shown', !txt().includes('忍住没说'), txt().slice(-160));
-
-  // --- the daily cap: no button, a gentle line instead ---
+  // --- the daily cap ---
+  wipe();
   w.__kyp.D.ai = { day: new Date().toISOString().slice(0,10), used: 3 };
-  w.go('patterns');
-  t('no button once the cap is spent', !doc.getElementById('aiBtn'));
-  t('a "come back tomorrow" line shows', txt().includes('今天的次数用完了'), txt().slice(-140));
+  await capture('第四次','autonomy','held_in');
+  t('no button once the three are spent', !doc.getElementById('aiBtn'));
+  t('a "come back tomorrow" line shows', ftxt().includes('今天的次数用完了'), ftxt().slice(-160));
   t('aiLeft is zero at the cap', w.__kyp.aiLeft()===0);
+  w.closeFlow();
 
   // --- the cap resets on a new day ---
   w.__kyp.D.ai = { day: '2000-01-01', used: 3 };
   t("yesterday's count does not carry over", w.__kyp.aiLeft()===3);
 
-  // --- a generic failure degrades gently and spends no use ---
+  // --- a generic failure degrades gently and spends nothing ---
+  wipe();
   w.fetch = async () => ({ ok:false, status:503 });
-  w.go('patterns');
+  await capture('又一次','autonomy','paused');
   doc.getElementById('aiBtn').click(); await wait(90);
-  t('a failed read says so, softly', (doc.getElementById('aiOut')||{}).textContent.includes('没连上'), (doc.getElementById('aiOut')||{}).textContent);
+  t('a failure says so, softly', (doc.getElementById('aiOut')||{}).textContent.includes('没连上'), (doc.getElementById('aiOut')||{}).textContent);
   t('a failure spends no use', w.__kyp.aiLeft()===3, JSON.stringify(w.__kyp.D.ai));
-  t('and the pattern card is still fully readable', txt().includes('可信度') && txt().includes('我们为什么这么说'), txt().slice(0,140));
+  t('the flow can still be finished', !!btns().find(x=>x.textContent.includes('完成')));
+  w.closeFlow();
 
   // --- a server 429 means "you're out today": sync to the cap, not an error ---
-  w.__kyp.D.ai = { day: '2000-01-01', used: 0 };
+  wipe();
   w.fetch = async () => ({ ok:false, status:429 });
-  w.go('patterns');
+  await capture('后端说不行了','autonomy','held_in');
   doc.getElementById('aiBtn').click(); await wait(90);
   t('a 429 shows the cap line, not a soft error', (doc.getElementById('aiOut')||{}).textContent.includes('今天的次数用完了'), (doc.getElementById('aiOut')||{}).textContent);
   t('and syncs the local count up to the cap', w.__kyp.aiLeft()===0, JSON.stringify(w.__kyp.D.ai));
+  w.closeFlow();
   w.__kyp.aiEndpoint = '';   // leave AI off for the remaining sections
 }
 
@@ -399,13 +391,11 @@ console.log('\n6l. distinct home doors + a stable in-place bright toggle');
   w.go('home');
   t('the two doors name their paths', txt().includes('被绊到的') && txt().includes('被打动的'), txt().slice(0,200));
   w.startNote();
-  t('bright toggle starts off', !doc.getElementById('nBright').classList.contains('sel'));
+  t('the keep door goes straight to writing', !!doc.getElementById('nText') && !doc.getElementById('nBright'), ftxt().slice(0,140));
+  t('save is disabled until something is written', doc.getElementById('nSave').disabled);
   doc.getElementById('nText').value = '半句还没写完';
-  w.toggleBright();
-  t('bright toggle flips on', doc.getElementById('nBright').classList.contains('sel'));
-  t('toggling did not wipe the textarea', doc.getElementById('nText').value === '半句还没写完');
-  w.toggleBright();
-  t('and flips back off', !doc.getElementById('nBright').classList.contains('sel'));
+  doc.getElementById('nText').dispatchEvent(new w.Event('input', { bubbles: true }));
+  t('and enables once it is', !doc.getElementById('nSave').disabled);
   w.closeNote();
 }
 

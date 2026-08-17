@@ -50,8 +50,8 @@ function viewHome(){
     ${showWeek ? weekCard(wk) : (showBright ? brightCard(bright) : '')}
     <div class="eyebrow">${ms.length ? c().momentsCount(ms.length) : ''}</div>
     <h1 class="lede">${c().somethingHappened}</h1>
-    <button class="cta door" onclick="startFlow()"><span>${c().catchOne}</span><span class="doorsub">${c().catchOneSub}</span></button>
-    <button class="cta ghost door notecta" onclick="startNote()"><span>${c().noteCta}</span><span class="doorsub">${c().noteCtaSub}</span></button>
+    <button class="cta door" onclick="startFlow()"><span>${c().catchOne}</span></button>
+    <button class="cta ghost door notecta" onclick="startNote()"><span>${c().noteCta}</span></button>
     ${predHook()}
     ${formingCard()}
 
@@ -194,8 +194,7 @@ function viewPatterns(){
     <div class="rule"></div>
     <div class="eyebrow mb">${c().otherPossibility}</div>
     <p class="body ink">${p.alternative ? sig(p.alternative).g : s.a}</p>
-    <p class="note">${c().needMore}</p>
-    ${aiBlock(p)}`;
+    <p class="note">${c().needMore}</p>`;
   } else {
     out += `<div class="eyebrow">${c().patterns}</div>
       <h1 class="lede sm">${c().noPatternYet}</h1>
@@ -443,19 +442,16 @@ function recentItems(){
    No signal, no reaction, no engine — a separate D.notes the pattern code
    never sees. Good ones can be marked; everything is caught the same way. */
 let note = null;
+/* Everything kept through this door is bright by definition — the door already
+   says "the ones that move you". Asking "is this one good?" afterwards was the
+   same question twice, so the toggle is gone and the flag is simply true. */
 function startNote(){
-  note = {id:uid(), ts:Date.now(), text:'', bright:false, saved:false, idx:0};
+  note = {id:uid(), ts:Date.now(), text:'', bright:true, saved:false, idx:0};
   $('overlay').classList.add('on');
   renderNote();
 }
 function closeNote(){ note=null; $('overlay').classList.remove('on'); render(); }
 function setNoteText(v){ if(note){ note.text=v; const b=$('nSave'); if(b) b.disabled = v.trim().length<1; } }
-function toggleBright(){   // flip in place — re-rendering the whole screen replayed the animation and wiped the textarea
-  if(!note) return;
-  note.bright = !note.bright;
-  const b = $('nBright');
-  if(b){ b.classList.toggle('sel', note.bright); b.setAttribute('aria-pressed', note.bright); }
-}
 function saveLightNote(){
   if(!note) return;
   const v = (note.text||'').trim(); if(v.length<1) return;
@@ -475,10 +471,10 @@ function renderNote(){
   if(note.saved){
     const line = c().letgoLines[note.idx % c().letgoLines.length];
     box.innerHTML = `<div class="letgo">
-      <div class="lgcard"><div class="lgtext">${esc(note.text)}</div>
-        ${note.bright ? `<div class="lgsig">「${c().noteBright}」</div>` : ''}</div>
+      <div class="lgcard"><div class="lgtext">${esc(note.text)}</div></div>
       <div class="lgbreath"><i></i></div>
       <p class="lgline">${line}</p>
+      ${aiBlock('note')}
       <div class="grow"></div>
       <button class="cta ghost" onclick="closeNote()">${c().letgoDone}</button>
     </div>`;
@@ -488,7 +484,6 @@ function renderNote(){
     <h1 class="lede sm">${c().noteH}</h1>
     <p class="body">${c().noteB}</p>
     <textarea id="nText" rows="4" placeholder="${c().notePh}" oninput="setNoteText(this.value)">${esc(note.text)}</textarea>
-    <button class="pill toggle ${note.bright?'sel':''}" id="nBright" aria-pressed="${!!note.bright}" style="align-self:flex-start;margin:12px 0 0" onclick="toggleBright()">${c().noteBright}</button>
     <div class="grow"></div>
     <button class="cta" id="nSave" ${note.text.trim().length<1?'disabled':''} onclick="saveLightNote()">${c().save}</button>
     <button class="cta ghost" onclick="closeNote()">${c().cancel}</button>`;
@@ -643,6 +638,7 @@ function revealView(){
       </div>
       <div class="saidcard"><div class="who">${c().speaker}</div>
         <p>${mline}</p></div>
+      ${aiBlock('moment')}
       ${nextBtn(c().done)}`;
   }
 
@@ -750,82 +746,77 @@ function letgoView(){
 }
 
 /* =====================================================================
-   AI REFLECTION — it reads the pattern, never a single fresh moment.
+   AI REFLECTION — offered at the moment of recording, on both doors.
 
-   Deliberately absent from the capture flow. That flow has one intention —
-   say it, see it restated, set it down — and an invitation to think harder
-   sits badly one button above a breathing dot. It is also where the model
-   has the least to work with: one moment written thirty seconds ago, which
-   it can only paraphrase. What this app has that a chat box doesn't is
-   accumulation, so the read happens where accumulation is: the Patterns
-   tab, in the cold, where several moments and the person's own words are
-   already laid out and they came back on purpose to look.
+   Three a day, free, and never automatic: the response only exists if the
+   person taps for it. On the snag door it comes after the mirror, beside
+   "done" rather than in front of it — set it down, or ask first, their
+   call. On the keep door it takes the place of the old "this one's good"
+   toggle: that door already means the moment moved you, so instead of
+   asking again the backend answers with one appreciative question.
 
-   The engine sees only labels; the model can read what they actually wrote.
-   That is the whole reason it is here. Off unless AI_ENDPOINT points at the
-   deployed backend (see worker/); capped at AI_DAILY_CAP a day, counted
-   locally and enforced again server-side. Light notes (D.notes) never
-   leave the device. The backend owns the model and the prompt.
+   Off unless AI_ENDPOINT points at the deployed backend (see worker/);
+   capped at AI_DAILY_CAP a day, counted locally and enforced again
+   server-side by IP. Kept notes never travel with a moment read, and a
+   moment read never travels with a kept note. The backend owns the model
+   and the prompt.
    ===================================================================== */
 let AI_ENDPOINT = 'https://patterna-reflect.innc1122.workers.dev';   // the deployed reflection backend; '' turns AI off everywhere
-const AI_DAILY_CAP = 3;        // a pattern doesn't re-form five times a day
+const AI_DAILY_CAP = 3;
 const aiToday = () => new Date().toISOString().slice(0,10);
 function aiUsedToday(){ const a = D.ai || {}; return a.day === aiToday() ? (a.used || 0) : 0; }
 function aiLeft(){ return Math.max(0, AI_DAILY_CAP - aiUsedToday()); }
 function aiOn(){ return !!AI_ENDPOINT; }
 
-/* the read, offered under the evidence it would be reading */
-function aiBlock(p){
-  if(!aiOn() || !p) return '';
-  const kept = storedRead(p);
-  if(kept) return `<div class="rule"></div><div class="aiwrap">
-    <div id="aiOut" class="aiout ready"><div class="who">${c().aiWho}</div><p>${esc(kept.text)}</p></div>
-  </div>`;
-  if(aiLeft() <= 0) return `<div class="rule"></div><p class="note aisends aicapdone">${c().aiCapDone}</p>`;
-  return `<div class="rule"></div><div class="aiwrap">
-    <button id="aiBtn" class="cta ghost" onclick="askReflection()">${c().aiCta}</button>
+/* kind is 'moment' (the snag door) or 'note' (the keep door) */
+function aiBlock(kind){
+  if(!aiOn()) return '';
+  if(aiLeft() <= 0) return `<p class="note aisends aicapdone">${c().aiCapDone}</p>`;
+  const sends = kind === 'note' ? c().aiSendsNote : c().aiSends;
+  return `<div class="aiwrap">
+    <button id="aiBtn" class="cta ghost" onclick="askReflection('${kind}')">${c().aiCta}</button>
     <div id="aiOut" class="aiout"></div>
-    <p class="note aisends">${c().aiSends} · ${c().aiCapLeft(aiLeft())}</p>
+    <p class="note aisends">${sends} · ${c().aiCapLeft(aiLeft())}</p>
   </div>`;
 }
 
-/* A read is pinned to the pattern state it was made from, so switching tabs
-   doesn't cost another use — and a moved picture (new signal, or the engine
-   grew more or less sure) offers a fresh read rather than showing a stale one. */
-function readKey(p){ return p ? p.signal + ':' + p.confidence : ''; }
-function storedRead(p){
-  const r = (D.ai || {}).read;
-  return r && r.key === readKey(p) ? r : null;
-}
-
-// the exact payload that leaves the device — the moments behind one pattern, in
-// the person's own words, with human-readable labels rather than internal codes
-function buildPatternRead(p){
-  if(!p) return null;
-  const ps = sig(p.signal);
-  const moments = D.moments.filter(m => m.signal === p.signal).slice(-6).reverse().map(m => ({
-    text: (m.text||'').slice(0,300),
-    response: RESPONSES[m.response] ? RESPONSES[m.response][L] : '',
+// the exact payload that leaves the device, built with human-readable labels
+// rather than internal codes so the model gets real words
+function buildReflect(kind){
+  if(kind === 'note'){
+    // a kept line goes alone: no signals, no history, nothing to pattern it against
+    return { lang: L, kind: 'note', note: { text: ((note && note.text) || '').slice(0,300) } };
+  }
+  const cur = flow && flow.m;
+  if(!cur) return null;
+  const label = m => {
+    const S = sig(m.signal);
+    return {
+      text: (m.text||'').slice(0,300),
+      signal: m.signal==='other' ? ((m.other||{}).signal||'') : (S ? S.n : ''),
+      reaction: REACTIONS[m.reaction] ? REACTIONS[m.reaction][L] : '',
+      response: RESPONSES[m.response] ? RESPONSES[m.response][L] : ''
+    };
+  };
+  const recent = D.moments.filter(m => m.id !== cur.id).slice(-8).reverse().map(m => Object.assign(label(m), {
     daysAgo: Math.max(0, Math.round((Date.now()-m.ts)/86400000))
   }));
-  const own = D.moments.filter(m => m.note).slice(-1)[0];
+  const pat = KYP.pattern(D.moments);
+  const pic = pat || KYP.glimpse(D.moments);
+  const ps = pic ? sig(pic.signal) : null;
   return {
     lang: L,
-    pattern: {
-      signal: ps ? ps.n : p.signal,
-      confidence: p.confidence,
-      hits: p.hits,
-      total: p.total,
-      alternative: p.alternative ? (sig(p.alternative) || {}).g : (ps ? ps.a : ''),
-      note: own ? (own.note||'').slice(0,300) : '',
-      moments
-    }
+    kind: 'moment',
+    current: label(cur),
+    recent,
+    picture: pic ? { signal: ps ? ps.n : pic.signal, kind: pat ? 'pattern' : 'forming' } : null
   };
 }
 
-async function askReflection(){
-  const p = KYP.pattern(D.moments);
-  if(!p || !aiOn() || aiLeft() <= 0) return;
+async function askReflection(kind){
+  if(!aiOn() || aiLeft() <= 0) return;
+  const payload = buildReflect(kind);
+  if(!payload) return;
   const out = $('aiOut'), btn = $('aiBtn');
   if(btn){ btn.disabled = true; btn.classList.add('busy'); }
   if(out){ out.className = 'aiout thinking'; out.textContent = c().aiThinking; }
@@ -833,7 +824,7 @@ async function askReflection(){
     const res = await fetch(AI_ENDPOINT, {
       method:'POST',
       headers:{ 'content-type':'application/json' },
-      body: JSON.stringify(buildPatternRead(p))
+      body: JSON.stringify(payload)
     });
     if(res.status === 429){                       // the backend says this person is out for today
       const a = D.ai = D.ai || {};
@@ -850,7 +841,6 @@ async function askReflection(){
     const a = D.ai = D.ai || {};                 // spend one of today's uses
     if(a.day !== aiToday()){ a.day = aiToday(); a.used = 0; }
     a.used = (a.used || 0) + 1;
-    a.read = { key: readKey(p), text, ts: Date.now() };   // keep it — leaving the tab shouldn't cost another use
     persist();
     if(out){ out.className = 'aiout ready'; out.innerHTML = `<div class="who">${c().aiWho}</div><p>${esc(text)}</p>`; }
     if(btn) btn.classList.add('hidden');
@@ -1022,7 +1012,7 @@ render();
 if(!D.onboarded) startOnboard();
 if(typeof window!=='undefined'){
   Object.defineProperty(window,'__kyp',{value:{
-    get D(){return D}, set D(v){D=v}, get L(){return L}, get flow(){return flow}, KYP, Store, buildPatternRead,
+    get D(){return D}, set D(v){D=v}, get L(){return L}, get flow(){return flow}, KYP, Store, buildReflect,
     get aiEndpoint(){return AI_ENDPOINT}, set aiEndpoint(v){AI_ENDPOINT=v}, aiLeft
   }});
 }

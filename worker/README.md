@@ -1,28 +1,29 @@
 # PATTERNA reflection backend
 
 A tiny [Cloudflare Worker](https://developers.cloudflare.com/workers/) that holds
-one **Google Gemini** API key and turns the moments behind a pattern into a short
-reflective note. The app calls this Worker; **the key never reaches the browser**, so nobody
+one **Google Gemini** API key and answers a moment the person just recorded. The app calls this Worker; **the key never reaches the browser**, so nobody
 using the app needs a key of their own.
 
 This is what makes AI reflection a product feature rather than a setting: you
-deploy this once, point the app at it, and it works for everyone — capped at a
-few reads per person per day.
+deploy this once, point the app at it, and it works for everyone — three free
+reflections per person per day.
 
-## What it reads, and what it deliberately doesn't
+## Two kinds, matching the app's two doors
 
-It reads **a pattern**, not a fresh capture: the moments the app has grouped under
-one signal, in the person's own words, plus the engine's confidence, the competing
-explanation it offers them, and their own written guess if they left one.
+| `kind` | door | what it gets | what it does |
+| --- | --- | --- | --- |
+| `moment` | 被绊到的瞬间 — the ones that snag you | that moment, its labels, and a few recent moments | mirrors it back, at most one gentle question |
+| `note` | 被打动的瞬间 — the ones that move you | **only** the single line they just kept | one appreciative-inquiry question or statement |
 
-The app keeps this out of the recording flow on purpose. That flow ends on letting
-the moment go, and an invitation to think harder sits badly one button above a
-breathing dot — and at capture time the model has one line written thirty seconds
-ago, which it can only paraphrase. Reading across moments is the only thing here
-that a chat box couldn't already do.
+The two never mix. A kept line travels alone — no signals, no history, nothing to
+pattern it against — because that side of the app is never analysed. A moment read
+never carries kept lines.
 
-**"Bright" light notes are never sent**, moments under other signals are never sent,
-and nothing is stored or logged, here or by this Worker.
+The reflection is always opt-in and never automatic: it exists only if the person
+taps for it, and on the snag door it sits *beside* "done" rather than in front of
+it, so setting the moment down without asking stays a first-class choice.
+
+Nothing is stored or logged, here or by this Worker.
 
 ## Deploy (about 5 minutes)
 
@@ -45,7 +46,8 @@ wrangler deploy
 
 `wrangler deploy` prints a URL like `https://patterna-reflect.<you>.workers.dev`.
 Put that URL into the app's `AI_ENDPOINT` constant (in `src/ui.js`) and redeploy
-the site — the read then appears on the Patterns tab for everyone, no key-pasting.
+the site — the reflect button then appears on both doors for everyone, no
+key-pasting.
 
 ## Configuration
 
@@ -65,7 +67,7 @@ Secrets (via `wrangler secret put`, never in the repo):
 
 ## The daily cap — enable server-side enforcement
 
-The app limits each person to `3` reads a day, but that count lives in the
+The app limits each person to `3` reflections a day, but that count lives in the
 browser and a determined user can reset it. This Worker enforces the same cap
 **server-side**, keyed by client IP, so the shared key can't be drained — it turns
 on the moment a [KV namespace](https://developers.cloudflare.com/kv/) named `RL` is
