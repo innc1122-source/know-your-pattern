@@ -95,14 +95,17 @@ const RESPONSES = {
   complied: {en:'Went along with it',zh:'顺着做了'},
   other:    {en:'Something else',   zh:'都不是'}
 };
+/* Words only. These labels are also what the AI backend receives, and with the
+   emoji still attached it read them as things the person had typed — it told
+   someone they had "shrugged it off with an emoji" when they had tapped a button. */
 const REACTIONS = {
-  irritated:{en:'😤 Seriously?',   zh:'😤 不是吧？'},
-  dread:    {en:'😰 Oh no.',       zh:'😰 完了。'},
-  hurt:     {en:'😔 That hurt.',   zh:'😔 有点受伤。'},
-  flat:     {en:'😶 Whatever.',    zh:'😶 随便吧。'},
-  thinking: {en:'🤔 Hmm…',         zh:'🤔 让我想想……'},
-  ok:       {en:'🙂 Actually okay.',zh:'🙂 其实还好。'},
-  other:    {en:'✨ Something else',zh:'✨ 都不是'}
+  irritated:{en:'Seriously?',      zh:'不是吧？'},
+  dread:    {en:'Oh no.',          zh:'完了。'},
+  hurt:     {en:'That hurt.',      zh:'有点受伤。'},
+  flat:     {en:'Whatever.',       zh:'随便吧。'},
+  thinking: {en:'Hmm…',            zh:'让我想想……'},
+  ok:       {en:'Actually okay.',  zh:'其实还好。'},
+  other:    {en:'Something else',  zh:'都不是'}
 };
 
 

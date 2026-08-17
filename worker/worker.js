@@ -95,7 +95,7 @@ Hard rules:
 - No advice, no fixes, no action items. At most one gentle, genuine question — and only if it opens something.
 - Short: 2 to 3 sentences, ONE paragraph, no blank lines.
 - Plain spoken, the way a level-headed friend talks. Concrete nouns, ordinary verbs. Never write a line you would be embarrassed to say out loud to them.
-- Banned: therapy-speak and lyrical filler. No "sit with", "hold space", "let it breathe", "a part of you", "that quiet sting", "the room feels smaller", "carries a piece of your". No metaphors about containers, weight, rooms, doors, or space unless they used one first.
+- Banned: therapy-speak and lyrical filler. No "sit with", "hold space", "let it breathe", "a part of you", "quiet sting", "the room feels smaller", "carries a piece of your". No metaphors about containers, weight, rooms, doors, or space unless they used one first.
 - Do not narrate their feelings back at them in prettier words. If you are describing their emotion rather than what they wrote or did, cut the sentence.
 - They decide what is true. Offer, never assert: "it looks like…", "maybe…", not "you clearly…".
 ${close}`;
